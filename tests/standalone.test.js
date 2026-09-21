@@ -245,7 +245,7 @@ test('recipe photography: only approved providers are displayed, starter photos 
   assert.equal(E.imageAllowed('https://lh3.googleusercontent.com/x'), false);
   assert.equal(E.imageAllowed(''), false);
   const r = E.prepRecipe({ id: 's_meatballs', name: 'Turkey Meatballs', ingredients: [] });
-  assert.match(E.recipeImage(r), /^https://(upload|thumb).wikimedia.org//);
+  assert.match(E.recipeImage(r), /^https:\/\/(upload|thumb)\.wikimedia\.org\//);
   assert.ok(r.imageAlt && r.imageCredit && r.imageLicense && r.imageCreditUrl.startsWith('https://commons.wikimedia.org/'));
   for (const [id, p] of Object.entries(E.STARTER_PHOTOS)) { assert.ok(E.imageAllowed(p.imageUrl), id); assert.ok(p.imageCredit && p.imageLicense && p.imageAlt, id + ' has credit, licence and alt text'); }
   const blog = E.prepRecipe({ id: 'imp1', name: 'Imported', imageUrl: 'https://blog.example/img.jpg', ingredients: [] });
