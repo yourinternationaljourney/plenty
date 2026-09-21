@@ -44,8 +44,8 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#6A3FA0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14121A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FBF7EF">
+<script>try{var t=JSON.parse(localStorage.getItem('plenty:ui')||'{}').theme;document.documentElement.setAttribute('data-theme',t==='dark'||t==='system'?t:'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}</script>
 <meta name="description" content="Plenty: weekly grocery, food, household and budget planner that lives on your device.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">

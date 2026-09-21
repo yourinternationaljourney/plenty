@@ -104,3 +104,7 @@ The standalone build has no AI service. The Coach, recipe generation, nutrition 
 ## Data, backups and privacy
 
 Settings → Your data offers: export a backup (optionally encrypted when it contains health or receipt data), import a backup with a preview and confirmation, edit or delete the health profile, remove receipts and receipt photos, delete shopping history, reset the current week, and delete all Plenty data. Backups are also how you move Plenty from a computer to a phone. Receipt photos are stored only in the device's IndexedDB and are removable.
+
+## Recipe photography
+
+Starter recipes show real food photographs from Wikimedia Commons, each with the photographer and licence (CC0, CC BY 2.0, CC BY-SA 4.0) credited on the image and linked to the file page. The records live in `STARTER_PHOTOS` (`src/8-discover-engine.js`) with `imageUrl`, `imageAlt`, `imageCredit`, `imageCreditUrl`, `imageLicense`, `imageLicenseUrl` and `imageProvider`. Remote images are only displayed from approved providers whose terms permit embedding (Wikimedia Commons, Unsplash, Pexels, Spoonacular); anything else falls back to Plenty's own procedurally drawn food tile. No AI-generated images are used.

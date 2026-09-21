@@ -5,17 +5,17 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const PLUM = [0x6A, 0x3F, 0xA0], PLATE = [0xFF, 0xFF, 0xFF], GREEN = [0x5E, 0x8F, 0x5A], ORANGE = [0xD2, 0x85, 0x3A], BERRY = [0x8E, 0x2E, 0x27];
+const PLUM = [0x5F, 0x7A, 0x4B], PLATE = [0xFF, 0xFD, 0xF8], GREEN = [0x3E, 0x8E, 0x4E], ORANGE = [0xF4, 0xD3, 0x5E], BERRY = [0xC8, 0x50, 0x3F];
 
 function svg(maskable) {
   const pad = maskable ? 0 : 0; // maskable icons keep content inside the safe zone (80% circle); we draw compactly anyway
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="${maskable ? 0 : 112}" fill="#6A3FA0"/>
-  <circle cx="256" cy="268" r="${maskable ? 150 : 168}" fill="#FFFFFF" fill-opacity="0.96"/>
-  <circle cx="256" cy="268" r="${maskable ? 122 : 136}" fill="none" stroke="#6A3FA0" stroke-opacity="0.18" stroke-width="6"/>
-  <ellipse cx="222" cy="252" rx="${maskable ? 56 : 62}" ry="${maskable ? 40 : 44}" transform="rotate(-18 222 252)" fill="#5E8F5A"/>
-  <ellipse cx="296" cy="286" rx="${maskable ? 48 : 54}" ry="${maskable ? 36 : 40}" transform="rotate(22 296 286)" fill="#D2853A"/>
-  <circle cx="262" cy="222" r="${maskable ? 26 : 30}" fill="#8E2E27"/>
+  <rect width="512" height="512" rx="${maskable ? 0 : 112}" fill="#5F7A4B"/>
+  <circle cx="256" cy="268" r="${maskable ? 150 : 168}" fill="#FFFDF8" fill-opacity="0.98"/>
+  <circle cx="256" cy="268" r="${maskable ? 122 : 136}" fill="none" stroke="#5F7A4B" stroke-opacity="0.18" stroke-width="6"/>
+  <ellipse cx="222" cy="252" rx="${maskable ? 56 : 62}" ry="${maskable ? 40 : 44}" transform="rotate(-18 222 252)" fill="#3E8E4E"/>
+  <ellipse cx="296" cy="286" rx="${maskable ? 48 : 54}" ry="${maskable ? 36 : 40}" transform="rotate(22 296 286)" fill="#F4D35E"/>
+  <circle cx="262" cy="222" r="${maskable ? 26 : 30}" fill="#C8503F"/>
   <circle cx="404" cy="116" r="${maskable ? 0 : 22}" fill="#FFFFFF" fill-opacity="0.35"/>
 </svg>`;
 }
@@ -32,11 +32,11 @@ function raster(size, maskable) {
     const x = (i + 0.5) / s, y = (j + 0.5) / s; let c = null, a = 255;
     if (maskable || inRoundRect(x, y, 112)) c = PLUM; else a = 0;
     if (c && inCircle(x, y, 256, 268, plateR)) c = PLATE;
-    if (c && Math.abs(Math.hypot(x - 256, y - 268) - ringR) <= 3) c = [0xE6, 0xDF, 0xF0];
+    if (c && Math.abs(Math.hypot(x - 256, y - 268) - ringR) <= 3) c = [0xE0, 0xE6, 0xD3];
     if (c && inEllipse(x, y, 222, 252, maskable ? 56 : 62, maskable ? 40 : 44, -18)) c = GREEN;
     if (c && inEllipse(x, y, 296, 286, maskable ? 48 : 54, maskable ? 36 : 40, 22)) c = ORANGE;
     if (c && inCircle(x, y, 262, 222, maskable ? 26 : 30)) c = BERRY;
-    if (c && !maskable && inCircle(x, y, 404, 116, 22)) c = [0xA0, 0x82, 0xC4];
+    if (c && !maskable && inCircle(x, y, 404, 116, 22)) c = [0x9D, 0xBB, 0x84];
     const o = (j * size + i) * 4; if (c) { px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = a; }
   }
   return px;

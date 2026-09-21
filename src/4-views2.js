@@ -100,6 +100,7 @@ function viewSettings(){const s=S.settings;const gb=s.groupBudgets||{};const sum
     ${petsCardHtml()}
     ${dataControlsHtml()}
     ${pwaCardHtml()}
+    ${appearanceCardHtml()}
     <div class="card pad"><h3 style="margin-bottom:12px">AI features</h3><p class="small muted">${sampleFn?'Claude is available on this page: the coach, recipe import and generation, estimates and receipt reading are on.':'This version runs without any AI service. The coach, recipe generation, estimates and automatic receipt reading show as unavailable; planning, grocery, budget, receipt and health calculations are all deterministic and work fully. A secure AI connection can be added later without changing the rest of the app (see MIGRATION.md).'}</p></div>
     <div class="card pad"><h3 style="margin-bottom:12px">Health profile</h3><p class="small muted">Optional. Age, sex, height, weight, activity, goals, preferences and considerations, used only to word the Weekly Health Check and the coach's food suggestions. Weight loss is never assumed. Delete it at any time.</p><div class="actions" style="margin-top:12px"><button class="btn" data-action="health-profile">${hasHealthProfile()?'Edit health profile':'Add health profile'}</button><button class="btn ghost" data-action="tab" data-tab="health">Open Weekly Health Check</button></div></div>
     <div class="card pad"><h3 style="margin-bottom:12px">Live recipes</h3>

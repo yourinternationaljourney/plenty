@@ -225,7 +225,7 @@ test('the production build contains no personal information or secrets and works
   assert.match(html, /navigator\.serviceWorker\.register\('\.\/sw\.js',\{scope:'\.\/'\}\)/);
   const manifest = JSON.parse(fs.readFileSync(path.join(dist, 'manifest.webmanifest'), 'utf8'));
   assert.equal(manifest.name, 'Plenty'); assert.equal(manifest.display, 'standalone'); assert.equal(manifest.start_url, './'); assert.equal(manifest.scope, './');
-  assert.equal(manifest.theme_color, '#6A3FA0'); assert.ok(manifest.background_color);
+  assert.equal(manifest.theme_color, '#5F7A4B'); assert.ok(manifest.background_color);
   assert.ok(manifest.icons.length >= 3 && manifest.icons.every(i => !i.src.startsWith('/') && fs.existsSync(path.join(dist, i.src))));
   const sw = fs.readFileSync(path.join(dist, 'sw.js'), 'utf8');
   assert.ok(!sw.includes('__VERSION__') && !sw.includes('__PRECACHE__'));
@@ -234,4 +234,21 @@ test('the production build contains no personal information or secrets and works
   assert.ok(sw.includes('SKIP_WAITING'), 'updates can be applied without users getting stuck');
   assert.equal(fs.readFileSync(path.join(dist, '404.html'), 'utf8'), html, 'refresh on the subpath falls back to the app');
   assert.ok(fs.existsSync(path.join(dist, '.nojekyll')));
+});
+
+test('recipe photography: only approved providers are displayed, starter photos are licensed and credited', () => {
+  const E = loadEngine();
+  assert.equal(E.imageAllowed('https://upload.wikimedia.org/wikipedia/commons/thumb/a/b/x.jpg/900px-x.jpg'), true);
+  assert.equal(E.imageAllowed('https://images.unsplash.com/photo-1?w=800'), true);
+  assert.equal(E.imageAllowed('https://images.pexels.com/photos/1/pexels-photo-1.jpeg'), true);
+  assert.equal(E.imageAllowed('https://some-food-blog.example/photo.jpg'), false, 'arbitrary sites are never hotlinked');
+  assert.equal(E.imageAllowed('https://lh3.googleusercontent.com/x'), false);
+  assert.equal(E.imageAllowed(''), false);
+  const r = E.prepRecipe({ id: 's_meatballs', name: 'Turkey Meatballs', ingredients: [] });
+  assert.match(E.recipeImage(r), /^https://(upload|thumb).wikimedia.org//);
+  assert.ok(r.imageAlt && r.imageCredit && r.imageLicense && r.imageCreditUrl.startsWith('https://commons.wikimedia.org/'));
+  for (const [id, p] of Object.entries(E.STARTER_PHOTOS)) { assert.ok(E.imageAllowed(p.imageUrl), id); assert.ok(p.imageCredit && p.imageLicense && p.imageAlt, id + ' has credit, licence and alt text'); }
+  const blog = E.prepRecipe({ id: 'imp1', name: 'Imported', imageUrl: 'https://blog.example/img.jpg', ingredients: [] });
+  assert.equal(E.recipeImage(blog), null, 'an imported recipe with a non-approved image falls back to the food tile');
+  assert.ok(E.tileSvg(blog).startsWith('<svg'));
 });

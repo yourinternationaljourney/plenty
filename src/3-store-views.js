@@ -29,6 +29,7 @@ function subscribeChat(){const k=S.ui.weekKey;if(!db)return;if(unsubChat)unsubCh
 function setWeek(k){S.ui.weekKey=k;subscribeChat();render()}
 
 async function boot(){
+  if(typeof applyTheme==='function')applyTheme(currentTheme());
   renderNav();render();
   const use=n=>(window.claude&&typeof window.claude.use==='function')?window.claude.use(n):Promise.resolve(null);
   use('sample').then(s=>{sampleFn=s;if(s){document.documentElement.classList.add('ai');render()}});

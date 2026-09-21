@@ -3,35 +3,38 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Karla:wght@400;500;600;700&display=swap">
 <style>
+/* Mediterranean palette: ivory and cream grounds, sand and oatmeal neutrals, olive and sage actions,
+   leafy green for good states, lemon as a cheerful highlight, tomato and terracotta as small accents. Light is the default;
+   dark is an optional theme chosen in Settings (data-theme="dark") or via "follow system" (data-theme="system"). */
 :root{
-  --bg:#F6F5F9; --surface:#FFFFFF; --surface2:#EEECF3; --surface3:#E1DEEA; --line:#D9D6E2; --line2:#C2BED0;
-  --ink:#1E1A2A; --ink2:#5B566B; --ink3:#8B869B;
-  --accent:#6A3FA0; --accent-ink:#FFFFFF; --accent-soft:#EDE6F7; --accent-line:#C4B2E3;
-  --good:#2E7D4F; --good-soft:#DDF0E4; --warn:#A8700F; --warn-soft:#F6EBD2; --bad:#B23A3A; --bad-soft:#F7DFDF;
-  --pet:#B86A1F; --pet-soft:#F8E9D8;
-  --shadow:0 1px 2px rgba(30,26,42,.05),0 10px 28px -14px rgba(30,26,42,.22);
+  --bg:#FBF7EF; --surface:#FFFDF8; --surface2:#F4EEE1; --surface3:#E9E1CE; --line:#E6DECB; --line2:#D1C6AC;
+  --ink:#2E3628; --ink2:#5E6853; --ink3:#87907B;
+  --accent:#5F7A4B; --accent-ink:#FFFFFF; --accent-soft:#E9EEDD; --accent-line:#B9C8A3;
+  --good:#2F7A3E; --good-soft:#DDEFD8; --warn:#8A6400; --warn-soft:#FBF0B8; --bad:#B8432E; --bad-soft:#F9E1D9;
+  --pet:#B4632A; --pet-soft:#F6E3D2; --lemon:#F4D35E; --lemon-soft:#FBF3C4; --peach:#F1B48E;
+  --shadow:0 1px 2px rgba(70,60,30,.05),0 10px 26px -14px rgba(70,60,30,.20);
   --r:12px; --r-s:8px;
   --display:"Young Serif",Georgia,"Times New Roman",serif;
   --body:"Karla",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#14121A; --surface:#1C1925; --surface2:#25212F; --surface3:#2E2A3A; --line:#322E3E; --line2:#454054;
-    --ink:#ECE9F2; --ink2:#ABA6B8; --ink3:#746F83;
-    --accent:#B594EA; --accent-ink:#1A0F2E; --accent-soft:#2B2140; --accent-line:#4D3B72;
-    --good:#5FBF88; --good-soft:#1C3325; --warn:#D9A544; --warn-soft:#332A14; --bad:#E3766B; --bad-soft:#3B1F1B;
-    --pet:#E0A05C; --pet-soft:#3A2A18;
+  :root[data-theme="system"]{
+    --bg:#1D2019; --surface:#252921; --surface2:#2E332A; --surface3:#383E33; --line:#3A4034; --line2:#4E5647;
+    --ink:#EEEBE0; --ink2:#B9B8A8; --ink3:#828776;
+    --accent:#9DBB84; --accent-ink:#1B2416; --accent-soft:#2E3A28; --accent-line:#536548;
+    --good:#7FC48A; --good-soft:#243A29; --warn:#E6C85A; --warn-soft:#3A3417; --bad:#E8836E; --bad-soft:#3F241F;
+    --pet:#E1A16C; --pet-soft:#3E2E20; --lemon:#E6C85A; --lemon-soft:#3A3417; --peach:#C98A66;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#14121A; --surface:#1C1925; --surface2:#25212F; --surface3:#2E2A3A; --line:#322E3E; --line2:#454054;
-  --ink:#ECE9F2; --ink2:#ABA6B8; --ink3:#746F83;
-  --accent:#B594EA; --accent-ink:#1A0F2E; --accent-soft:#2B2140; --accent-line:#4D3B72;
-  --good:#5FBF88; --good-soft:#1C3325; --warn:#D9A544; --warn-soft:#332A14; --bad:#E3766B; --bad-soft:#3B1F1B;
-  --pet:#E0A05C; --pet-soft:#3A2A18;
+  --bg:#1D2019; --surface:#252921; --surface2:#2E332A; --surface3:#383E33; --line:#3A4034; --line2:#4E5647;
+  --ink:#EEEBE0; --ink2:#B9B8A8; --ink3:#828776;
+  --accent:#9DBB84; --accent-ink:#1B2416; --accent-soft:#2E3A28; --accent-line:#536548;
+  --good:#7FC48A; --good-soft:#243A29; --warn:#E6C85A; --warn-soft:#3A3417; --bad:#E8836E; --bad-soft:#3F241F;
+  --pet:#E1A16C; --pet-soft:#3E2E20; --lemon:#E6C85A; --lemon-soft:#3A3417; --peach:#C98A66;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
   color-scheme:dark;
 }
@@ -443,4 +446,78 @@ form.inline{display:grid;grid-template-columns:1fr;gap:8px}
 .obnav{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px}
 .ob .grid2{gap:12px}
 .ob .field select,.ob .field input{width:100%}
+</style>
+<style>
+/* ===== Responsive hardening: long names wrap, nothing escapes its container, no horizontal page scroll ===== */
+html,body{overflow-x:clip;max-width:100%}
+main,.shell{min-width:0}
+.grid2>*,.tiles>*,.days>*,.rgrid>*,.igrid>*,.shelf>*,.split>*,.settings>*,.gwrap>*,.chat>*{min-width:0}
+.rn,.nm,.ent .rn button.nm,.slot .rn,.rc .rn,.rcard .rn,.pick .rn,.gi .n,.li .grow,.kv>span,.kv>b,.tile .v,.tile .d,.ic .nm,.hname,.msg,.note,.prop span,h1,h2,h3{overflow-wrap:anywhere;word-break:normal;min-width:0}
+.chip{white-space:normal;text-align:left;line-height:1.3;max-width:100%}
+.btn{white-space:normal;text-align:center;line-height:1.25}
+.btn.icon{white-space:nowrap}
+.tab span{overflow-wrap:anywhere}
+.weeknav{min-width:0}
+.weeknav h1{min-width:0;flex:1 1 160px}
+.head>div{min-width:0;flex:1 1 240px}
+.head .actions{max-width:100%}
+.gi{flex-wrap:wrap}
+.gi label{flex:1 1 200px}
+.gi .n small{white-space:normal;overflow:visible;text-overflow:clip}
+.gi .q{min-width:56px;flex:0 0 auto}
+.li{flex-wrap:wrap}
+.li .amt{white-space:normal}
+.kv{flex-wrap:wrap}
+.pick{flex-wrap:wrap}
+.pick .m{white-space:normal}
+.slot .meta,.ent .meta{min-width:0}
+.rcard .body{min-width:0}
+.rcard .meta span{overflow-wrap:anywhere}
+.dayrow button{min-width:0;padding-left:0;padding-right:0}
+.facts span{overflow-wrap:anywhere}
+.rhero .src{max-width:calc(100% - 24px);white-space:normal}
+.impact .kv b{text-align:right}
+.status{white-space:normal}
+.search{min-width:0}
+.dsearch .search{min-width:0;flex:1 1 200px}
+.thumbs .pick{min-width:0}
+.rtable .n input{min-width:0;width:100%}
+.stack{max-width:100%}
+.bars{min-width:0}
+.bar .l{white-space:normal;text-align:center}
+@media (max-width:360px){
+  main{padding-left:12px;padding-right:12px}
+  .tiles{grid-template-columns:1fr 1fr}
+  .tile{padding:12px 12px}
+  .tile .v{font-size:21px}
+  .dayrow{gap:2px}
+  .dayrow button{font-size:11px}
+  .dayrow button small{font-size:9.5px}
+  .head h1{font-size:21px}
+  .shelf{grid-auto-columns:minmax(200px,82vw);margin:0 -12px;padding-left:12px;padding-right:12px}
+  .obsteps span{font-size:10px;padding:3px 6px}
+  .ob .row{flex-wrap:wrap}
+}
+@media (max-width:820px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{flex-wrap:wrap}
+  .row>*{flex:1 1 140px}
+  .ing-row{grid-template-columns:56px 64px 1fr 30px}
+  .ing-row select,.ing-row .pr{grid-column:span 2}
+}
+/* ===== Recipe photography ===== */
+.rimg img,.rhero img{object-fit:cover;object-position:center}
+.credit{position:absolute;right:8px;bottom:8px;font-size:10.5px;color:#FFFDF8;background:rgba(46,54,40,.62);padding:2px 7px;border-radius:999px;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.credit a{color:inherit;text-decoration:none}
+.credit a:hover{text-decoration:underline}
+.rcard .rimg .credit{bottom:auto;top:8px;left:8px;right:auto}
+.rcard .fav{z-index:1}
+/* lemon highlight for the brand mark and hero tile */
+.brand .mark{background:var(--accent);box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.tile.hi{background:var(--lemon-soft);border-color:var(--lemon)}
+</style>
+<style>
+/* icon sizing inside reset buttons and inline controls */
+.slot .add svg,.ent .rn .rm svg,.gi .mini svg,.pick svg,.have-btn svg{width:16px;height:16px;flex:none}
+button svg{flex:none}
 </style>
