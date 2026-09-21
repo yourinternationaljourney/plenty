@@ -20,9 +20,9 @@ if (head.length !== 1) throw new Error('Expected exactly one numbered .html part
 if (scripts[scripts.length - 1] !== '99-boot.js') throw new Error('99-boot.js must be the last script part');
 
 const js = scripts.map(f => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n');
-const tmp = path.join(os.tmpdir(), 'plenty-build-check.js');
-fs.writeFileSync(tmp, js);
-execFileSync(process.execPath, ['--check', tmp], { stdio: 'inherit' });
+// unique per process so concurrent builds (the test suite runs three) never share the file; always removed, even when the check fails
+const tmp = path.join(os.tmpdir(), 'plenty-build-check-' + process.pid + '-' + crypto.randomBytes(4).toString('hex') + '.js');
+try { fs.writeFileSync(tmp, js); execFileSync(process.execPath, ['--check', tmp], { stdio: 'inherit' }); } finally { fs.rmSync(tmp, { force: true }); }
 if (process.argv.includes('--check-only')) { console.log('Syntax OK (' + scripts.length + ' script parts)'); process.exit(0); }
 
 const headPart = fs.readFileSync(path.join(SRC, head[0]), 'utf8');
