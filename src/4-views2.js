@@ -77,6 +77,7 @@ function viewCoach(){
 function viewSettings(){const s=S.settings;const gb=s.groupBudgets||{};const sum=GROUPS.reduce((a,k)=>a+(+gb[k]||0),0)+(+s.buffer||0);
   return `<div class="head"><div><div class="eyebrow">Settings</div><h1>Budget, household & targets</h1><div class="sub">Changes save as you make them.</div></div></div>
   <div class="grid2">
+    ${typeof accountCardHtml==='function'?accountCardHtml():''}
     ${profileCardHtml()}
     <div class="card pad"><h3 style="margin-bottom:12px">Weekly grocery budget</h3>
       <div class="row"><div class="field"><label for="sBud">Total per week (${esc(s.currency)})</label><input id="sBud" type="number" min="0" step="1" value="${s.weeklyBudget}" data-setting="weeklyBudget"></div><div class="field"><label for="sBuf">Budget buffer (${esc(s.currency)})</label><input id="sBuf" type="number" min="0" step="1" value="${s.buffer}" data-setting="buffer"></div></div>

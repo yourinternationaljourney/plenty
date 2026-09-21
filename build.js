@@ -27,6 +27,7 @@ if (process.argv.includes('--check-only')) { console.log('Syntax OK (' + scripts
 
 const headPart = fs.readFileSync(path.join(SRC, head[0]), 'utf8');
 const version = pkg.version + '+' + crypto.createHash('sha256').update(js + headPart).digest('hex').slice(0, 8);
+const CLOUD = process.env.PLENTY_CLOUD === 'netlify' ? 'netlify' : '';
 const scriptTag = `<script>\nconst PLENTY_VERSION='${version}';\n${js}\n</script>\n`;
 
 if (process.argv.includes('--artifact')) {
@@ -53,6 +54,7 @@ const html = `<!doctype html>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+${CLOUD ? '<meta name="plenty-cloud" content="netlify">\n<script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>' : ''}
 ${headLinks.join('\n')}
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 </head>
@@ -61,7 +63,7 @@ ${bodyLines.join('\n')}
 ${scriptTag}</body>
 </html>
 `;
-const dist = path.join(ROOT, 'dist');
+const dist = process.env.PLENTY_OUT ? path.resolve(process.env.PLENTY_OUT) : path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
 fs.writeFileSync(path.join(dist, 'index.html'), html);
@@ -77,4 +79,4 @@ fs.writeFileSync(path.join(dist, 'version.json'), JSON.stringify({ version, buil
 // guard: no personal data or secrets in the bundle
 const forbidden = [/simone/i, /dobby/i, /simonevharen/i, /SPOONACULAR_API_KEY\s*=\s*['"][^'"]+/, /sk-[A-Za-z0-9]{20,}/, /sk-ant-/];
 for (const re of forbidden) if (re.test(html)) throw new Error('Refusing to build: bundle matches forbidden pattern ' + re);
-console.log(`Built dist/ (${version}) from ${parts.length} parts; ${html.length} bytes; precache ${precache.length} files`);
+console.log(`Built dist/ (${version}${CLOUD ? ', cloud: netlify' : ', local-only'}) from ${parts.length} parts; ${html.length} bytes; precache ${precache.length} files`);

@@ -1,0 +1,58 @@
+# Netlify configuration for Plenty.
+# Build: the existing production build, then database migrations (a no-op until Netlify Database is enabled).
+# Secrets (database URL, blob tokens) exist only as Netlify environment variables and are read inside Functions.
+
+[build]
+  command = "npm run build:netlify"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PLENTY_CLOUD = "netlify"          # tells build.js to include the Identity widget and the account UI
+
+[functions]
+  node_bundler = "esbuild"
+
+# Deploy previews and branch deploys build the same way; Identity and Database are per site, so previews share them.
+[context.deploy-preview]
+  command = "npm run build:netlify"
+
+[context.branch-deploy]
+  command = "npm run build:netlify"
+
+# API: every data or blob operation goes through authenticated Functions.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# PWA: existing files (index.html, sw.js, manifest, icons, version.json) are served as-is; any other path falls back to the app,
+# so refreshing or deep-linking never 404s.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"

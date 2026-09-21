@@ -1,8 +1,8 @@
 {
   "name": "plenty",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "Plenty: a local-first weekly grocery, food, household and budget planner. Installable PWA, no account, no server.",
+  "description": "Plenty: a local-first weekly grocery, food, household and budget planner. Installable PWA; optional Netlify account for a private server copy.",
   "scripts": {
     "build": "node build.js",
     "build:artifact": "node build.js --artifact",
@@ -10,9 +10,20 @@
     "test": "node --test",
     "serve": "node tools/serve.js",
     "server": "node server/index.js",
-    "release": "npm version minor -m \"Release v%s\""
+    "release": "npm version minor -m \"Release v%s\"",
+    "build:netlify": "node build.js && node tools/db-migrate.js",
+    "db:migrate": "node tools/db-migrate.js"
   },
-  "engines": { "node": ">=18" },
-  "repository": { "type": "git", "url": "" },
-  "license": "UNLICENSED"
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourinternationaljourney/plenty.git"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "@netlify/blobs": "^8.1.0"
+  }
 }

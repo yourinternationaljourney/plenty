@@ -108,3 +108,15 @@ Settings → Your data offers: export a backup (optionally encrypted when it con
 ## Recipe photography
 
 Starter recipes show real food photographs from Wikimedia Commons, each with the photographer and licence (CC0, CC BY 2.0, CC BY-SA 4.0) credited on the image and linked to the file page. The records live in `STARTER_PHOTOS` (`src/8-discover-engine.js`) with `imageUrl`, `imageAlt`, `imageCredit`, `imageCreditUrl`, `imageLicense`, `imageLicenseUrl` and `imageProvider`. Remote images are only displayed from approved providers whose terms permit embedding (Wikimedia Commons, Unsplash, Pexels, Spoonacular); anything else falls back to Plenty's own procedurally drawn food tile. No AI-generated images are used.
+
+## Netlify deployment and accounts (v2.1)
+
+Netlify hosts the same static build and adds an optional account layer; GitHub remains the source repository and the GitHub Pages deployment keeps working as a local-only fallback.
+
+- `netlify.toml`: build `npm run build:netlify` (production build + database migrations), publish `dist`, functions in `netlify/functions`, `/api/*` → Functions, SPA fallback for PWA refreshes, security headers, deploy previews.
+- **Identity**: sign up, email verification, login, logout, password recovery and password/email changes through the Netlify Identity widget (loaded only in cloud builds). Functions read the verified user from the token Netlify validates; ids in requests are never trusted.
+- **Database**: Netlify Database (Postgres) with version-controlled migrations in `netlify/db/migrations/`, applied once each at deploy by `tools/db-migrate.js`. Every private table is keyed by `user_id`; health data lives in separate tables with its own export section and delete endpoint.
+- **Blobs**: receipt photos in the private store `plenty-receipts` under non-guessable per-user keys, served only to their owner through `/api/receipt-image`, deleted with the receipt or the account. Receipt processing (OCR) is not connected; the UI says so.
+- **Functions**: `profile`, `app-data` (import with preview, duplicate and older-data protection; read back), `receipts`, `receipt-image`, `account-export`, `health-data` (delete health or price history), `account-delete`. Input validation, ownership checks, structured errors, size limits and best-effort rate limiting live in `netlify/functions/lib/`.
+- **Local-first stays authoritative**: an account holds a copy only when you import; restoring on another device is explicit. Automatic synchronization is not implemented (see `docs/SYNC.md`).
+- Setup steps and environment variables: `docs/NETLIFY-SETUP.md`. Future supermarket price sources: `docs/RETAILERS.md` (interface and registry only).
