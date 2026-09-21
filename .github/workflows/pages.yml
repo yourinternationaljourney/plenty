@@ -22,8 +22,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm test
       - run: npm run build
+      - run: npm test
       - uses: actions/configure-pages@v5
         with:
           enablement: true   # creates the Pages site on first run so no manual Settings step is needed

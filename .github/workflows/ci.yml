@@ -13,10 +13,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run tests (includes the no-personal-data and no-secrets checks on the built bundle)
-        run: npm test
       - name: Production build
         run: npm run build
+      - name: Run tests (includes the no-personal-data and no-secrets checks on the built bundle)
+        run: npm test
       - name: Guard - no secrets or personal data committed
         run: |
           set -e
