@@ -28,9 +28,12 @@ main.addEventListener('change',e=>{const t=e.target;
   if(t.dataset.setting){let v=t.value;if(t.type==='number'||t.dataset.setting==='shopDay'){v=parseFloat(v);if(isNaN(v))return;if(t.dataset.setting==='people')v=Math.max(1,Math.min(12,Math.round(v)))}saveSettings({[t.dataset.setting]:v});toast('Saved');return}
   if(t.dataset.groupBudget){const gb={...(S.settings.groupBudgets||{})};const v=parseFloat(t.value);if(isNaN(v))delete gb[t.dataset.groupBudget];else gb[t.dataset.groupBudget]=v;saveSettings({groupBudgets:gb});return}
   if(t.dataset.themePick){setTheme(t.dataset.themePick);toast('Appearance saved');return}
+  if(t.dataset.prefStore){const set=new Set(S.settings.preferredStores||[]);if(t.checked)set.add(t.dataset.prefStore);else set.delete(t.dataset.prefStore);saveSettings({preferredStores:[...set]});return}
+  if(t.dataset.compareMode){saveSettings({compareMode:t.dataset.compareMode});return}
+  if(t.dataset.ps){psState()[t.dataset.ps]=t.value;render();return}
   if(t.dataset.allergy){const set=new Set(S.settings.allergies||[]);if(t.checked)set.add(t.dataset.allergy);else set.delete(t.dataset.allergy);saveSettings({allergies:ALLERGENS.filter(a=>set.has(a))});toast('Allergies saved and enforced');return}
   if(t.dataset.target){const tg={...S.settings.targets};tg[t.dataset.target]=Math.max(0,Math.min(21,Math.round(parseFloat(t.value)||0)));saveSettings({targets:tg});return}});
-main.addEventListener('input',e=>{if(e.target.dataset.ob||e.target.dataset.obm||e.target.dataset.oba||e.target.dataset.obg||e.target.dataset.obb){obRead();return}if(e.target.dataset.input==='q'){S.ui.q=e.target.value;render()}if(e.target.dataset.input==='dq'){discSearchInput(e.target.value)}if(e.target.dataset.input==='chat'){S.ui.chatDraft=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(160,e.target.scrollHeight)+'px'}});
+main.addEventListener('input',e=>{if(e.target.dataset.input==='pq'){psState().q=e.target.value;clearTimeout(window.__pqT);window.__pqT=setTimeout(render,250);return}if(e.target.dataset.ob||e.target.dataset.obm||e.target.dataset.oba||e.target.dataset.obg||e.target.dataset.obb){obRead();return}if(e.target.dataset.input==='q'){S.ui.q=e.target.value;render()}if(e.target.dataset.input==='dq'){discSearchInput(e.target.value)}if(e.target.dataset.input==='chat'){S.ui.chatDraft=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(160,e.target.scrollHeight)+'px'}});
 main.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
   if(f.id==='extraForm'){const name=f.name.value.trim();if(!name)return;const w=week();w.extras=w.extras||[];w.extras.push({id:uid('x'),name,qty:parseFloat(f.qty.value)||1,unit:f.unit.value,category:f.category.value,price:parseFloat(f.price.value)||0,priority:f.priority.value});saveWeek();toast('Added '+name)}
   if(f.id==='invQuick'){const name=f.name.value.trim();if(!name)return;const q=parseFloat(f.qty.value);saveInv({id:uid('h'),name,qty:isNaN(q)?0:q,unit:f.unit.value,location:f.location.value,note:''});toast('Added to At Home')}});
@@ -116,6 +119,16 @@ function handleAction(b,e){const a=b.dataset.action,d=b.dataset;
     case 'backup-import':openImport();break;
     case 'delete-history':confirmModal('Delete all shopping history?','Every logged checkout, receipt line and receipt photo in every week is removed from this device. Plans and recipes stay.','Delete history',async()=>{for(const k in S.weeks){for(const t of (S.weeks[k].trips||[]))if(t.imageId&&Store.backend)await Store.delBlob(t.imageId).catch(()=>{});S.weeks[k].trips=[];writeDoc('weeks/'+k,S.weeks[k])}render();toast('Shopping history deleted')},true);break;
     case 'delete-all':confirmModal('Delete all Plenty data on this device?','This removes the current profile completely: settings, plans, recipes, grocery lists, inventory, pets, receipts and photos, price history, health profile and check-ins. There is no undo. Export a backup first if you are unsure.','Delete everything',()=>{deleteAllPlentyData();toast('All Plenty data for this profile was deleted')},true);break;
+    case 'gseg':S.ui.gseg=d.seg;render();window.scrollTo(0,0);break;
+    case 'line-compare':openLineCompare(d.key);break;
+    case 'cmp-select':S.ui.cmpSel=d.k;render();break;
+    case 'basket-use':{const cmp=compareBaskets();const o=cmp.options[d.k];if(!o||!o.matched){toast('No priced option to use yet.');return}const w=week();w.basketChoice={optionKey:d.k,storeIds:o.storeIds,total:o.total,matched:o.matched,unmatched:o.unmatched,totalLines:cmp.totalLines,at:new Date().toISOString()};saveWeek();toast('Budget now shows this basket estimate; your list is unchanged.');break}
+    case 'basket-clear':{const w=week();delete w.basketChoice;saveWeek();break}
+    case 'how-prices':openHowPrices();break;
+    case 'price-manual':closeModal();openManualPrice({name:d.name,cat:d.cat,pid:d.pid});break;
+    case 'ps-store':{const set=new Set(psState().stores);if(!set.size){preferredStores().forEach(s=>set.add(s.id))}set.has(d.id)?set.delete(d.id):set.add(d.id);psState().stores=set.size===preferredStores().length?[]:[...set];render();break}
+    case 'prod-fav':{const p=S.products[d.id];if(!p)return;p.favorite=!p.favorite;writeDoc('products/'+p.id,p);render();break}
+    case 'prod-add':{const p=S.products[d.id];if(!p)return;const best=searchProducts(p.canonicalName,{}).find(r=>r.product.id===p.id);const price=best&&best.best?best.best.price:0;const w=week();w.extras=w.extras||[];w.extras.push({id:uid('x'),name:p.canonicalName,qty:p.packageQuantity||1,unit:p.packageUnit||'pcs',category:p.category,price,priority:'preferred',productId:p.id});saveWeek();toast(`${p.canonicalName} added to your list${price?' at '+money(price):''}`);break}
     case 'pwa-update':applyUpdate();break;
     case 'acct-login':if(window.netlifyIdentity)window.netlifyIdentity.open('login');else toast('The sign-in service is not available on this page.');break;
     case 'acct-manage':if(window.netlifyIdentity)window.netlifyIdentity.open();break;
@@ -125,7 +138,7 @@ function handleAction(b,e){const a=b.dataset.action,d=b.dataset;
     case 'acct-export':accountExportDownload();break;
     case 'acct-delete':openAccountDelete();break;
     case 'acct-delete-health':confirmModal('Delete health data from your account?','Removes the health profile and check-ins stored in the account. Local data on this device is not affected.','Delete from account',async()=>{try{await api('health-data',{method:'DELETE'});await loadCloudProfile();toast('Health data removed from your account')}catch(e){toast(cloudErr(e))}},true);break;
-    case 'acct-delete-prices':confirmModal('Delete price history from your account?','Removes remembered prices and product mappings stored in the account.','Delete from account',async()=>{try{const r=await api('health-data?what=prices',{method:'DELETE'});await loadCloudProfile();toast(`${r.count} price records removed from your account`)}catch(e){toast(cloudErr(e))}},true);break;
+    case 'acct-delete-prices':confirmModal('Delete price history from your account?','Removes remembered prices, prices you entered, offers and product mappings stored in the account.','Delete from account',async()=>{try{const r=await api('health-data?what=prices',{method:'DELETE'});await loadCloudProfile();toast(`${r.count} price records removed from your account`)}catch(e){toast(cloudErr(e))}},true);break;
     case 'acct-photo-upload':closeModal();uploadTripPhotoToAccount(d.id);break;
     case 'acct-photo-remove':closeModal();removeTripPhotoFromAccount(d.id);break;
     case 'pwa-install':promptInstall();break;

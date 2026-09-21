@@ -162,3 +162,7 @@ A simple, supportive review of whether the week's plan and purchases form a reas
 - **Tests** (`tests/health.test.js`): pet exclusion, stock-up handling, planned vs purchased vs reported, meat frequency, fruit and vegetable variety, fiber recognition, sweet-snack trends and insufficient-data states, user-controlled swaps, profile deletion, and no weight-loss language.
 
 Build note: `src/99-boot.js` must stay the last part. The first render touches every engine, so `boot()` may only run after all `const` bindings exist; calling it earlier aborts start-up before the database subscriptions are set up.
+
+## 12. v2.2 — Supermarket price comparison (in Groceries)
+
+Three internal segments in Groceries (My list / Compare stores / Search products), not new tabs. Whole-basket comparison across the preferred supermarkets with Easiest, Recommended (store-count setting and minimum-saving threshold) and Cheapest options; per-line comparison; product search with unit prices; manual price entry; honest price labels (current / promotion / receipt-confirmed / entered by you / estimated / unavailable); deterministic matching with a review state; provider interface with the local provider live and retailer adapters planned. See `docs/PRICE-COMPARISON.md`.

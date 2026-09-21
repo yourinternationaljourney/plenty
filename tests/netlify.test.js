@@ -103,6 +103,12 @@ test('health data and price history can be deleted separately; export puts healt
   assert.equal(repo.t.health_profiles.size, 0); assert.equal(repo.t.health_checkins.size, 0); assert.equal(repo.t.recipes.size, 1, 'other data stays');
   assert.equal(parse(await h.healthData(ev('DELETE', 'health-data', null, { what: 'prices' }), ctx('alice'))).body.count, 1);
   assert.equal(repo.t.price_observations.size, 0);
+  // v2.2: price observations and offers entered in the app are personal price history too; products are not
+  await h.appData(ev('POST', 'app-data', { sourceProfileId: 'p9', docs: { ...docs, 'products/p1': { id: 'p1', canonicalName: 'Milk' }, 'storeproducts/sp1': { id: 'sp1', storeId: 'jumbo', productId: 'p1' }, 'priceobs/ob1': { id: 'ob1', storeProductId: 'sp1', price: 1.19, manual: true }, 'offers/of1': { id: 'of1', storeProductId: 'sp1' } } }), ctx('carol'));
+  const collsOf = () => [...repo.t.app_documents.entries()].filter(([k]) => k.startsWith('carol|')).map(([, r]) => r.collection).sort();
+  assert.deepEqual(collsOf(), ['offers', 'priceobs', 'products', 'storeproducts']);
+  await h.healthData(ev('DELETE', 'health-data', null, { what: 'prices' }), ctx('carol'));
+  assert.deepEqual(collsOf(), ['products', 'storeproducts'], 'entered prices and offers are deleted with price history; products stay');
 });
 
 test('account deletion removes every row and blob for that user only, then the Identity user', async () => {

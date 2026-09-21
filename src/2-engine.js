@@ -42,7 +42,7 @@ const ICONS={
 ICONS.discover=ICONS.search;ICONS.health='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-9.5-9.3C1.2 8.4 3.3 5 6.8 5c1.9 0 3.4 1 4.2 2.4C11.8 6 13.3 5 15.2 5c3.5 0 5.6 3.4 4.3 6.7C17.5 16.4 12 21 12 21z"/><path d="M7 12h3l1.5-3 2 6 1.5-3h2"/></svg>';
 
 /* ================= state ================= */
-const S={settings:{...DEFAULT_SETTINGS},recipes:{},items:{},inventory:{},weeks:{},chats:{},prices:{},history:{viewed:[],cooked:[]},external:{},health:null,checkins:null,ui:{tab:'home',weekKey:null,q:'',tag:'',mealFilter:'',storage:'local',chatDraft:'',busy:false,mode:'app'},loaded:false};
+const S={settings:{...DEFAULT_SETTINGS},recipes:{},items:{},inventory:{},weeks:{},chats:{},prices:{},history:{viewed:[],cooked:[]},external:{},products:{},storeproducts:{},priceobs:{},offers:{},stores:{},health:null,checkins:null,ui:{tab:'home',weekKey:null,q:'',tag:'',mealFilter:'',storage:'local',chatDraft:'',busy:false,mode:'app'},loaded:false};
 let db=null,sampleFn=null;
 const hot=window.claude&&window.claude.hot;const restored=(hot&&hot.data)||{};
 if(restored.tab)S.ui.tab=restored.tab;

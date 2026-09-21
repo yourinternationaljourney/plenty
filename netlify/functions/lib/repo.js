@@ -56,6 +56,8 @@ function docsFromRows(rows) {
 
 const TABLES = ['users', 'household_settings', 'pets', 'weekly_plans', 'meals', 'recipes', 'grocery_items', 'pantry_items', 'receipts', 'receipt_line_items', 'product_mappings', 'price_observations', 'preferred_stores', 'health_profiles', 'health_checkins', 'app_documents', 'import_status'];
 const HEALTH_TABLES = ['health_profiles', 'health_checkins'];
+// v2.2 price-comparison documents (products, storeproducts, priceobs, offers) travel in app_documents; these two are personal price history.
+const PRICE_DOC_COLLECTIONS = ['priceobs', 'offers'];
 
 /* ================= MemoryRepo ================= */
 class MemoryRepo {
@@ -93,7 +95,7 @@ class MemoryRepo {
   async listReceipts(userId) { return this._rows('receipts', userId); }
   async setReceiptImage(userId, id, img) { const r = await this.getReceipt(userId, id); if (!r) return null; Object.assign(r, { image_blob_key: img ? img.key : null, image_mime: img ? img.mime : null, image_size: img ? img.size : null, updated_at: nowIso() }); return r; }
   async deleteReceipt(userId, id) { const r = await this.getReceipt(userId, id); if (!r) return null; this.t.receipts.delete(this._k(userId, id)); for (const k of [...this.t.receipt_line_items.keys()]) if (k.startsWith(userId + '|' + id + ':')) this.t.receipt_line_items.delete(k); return r; }
-  async deletePriceHistory(userId) { const n = this._rows('price_observations', userId).length; this._clear('price_observations', userId); this._clear('product_mappings', userId); return n; }
+  async deletePriceHistory(userId) { const n = this._rows('price_observations', userId).length; this._clear('price_observations', userId); this._clear('product_mappings', userId); for (const [k, v] of [...this.t.app_documents]) if (k.startsWith(userId + '|') && PRICE_DOC_COLLECTIONS.includes(v.collection)) this.t.app_documents.delete(k); return n; }
   async deleteHealth(userId) { for (const n of HEALTH_TABLES) this._clear(n, userId); }
   async exportAll(userId) { const out = {}; for (const n of TABLES) out[n] = n === 'users' ? [this.t.users.get(userId)].filter(Boolean) : this._rows(n, userId); return out; }
   async blobKeys(userId) { return this._rows('receipts', userId).map(r => r.image_blob_key).filter(Boolean); }
@@ -138,7 +140,7 @@ class SqlRepo {
   async listReceipts(userId) { return this.sql`select * from receipts where user_id = ${userId} order by receipt_date desc`; }
   async setReceiptImage(userId, id, img) { const rows = await this.sql`update receipts set image_blob_key = ${img ? img.key : null}, image_mime = ${img ? img.mime : null}, image_size = ${img ? img.size : null}, updated_at = now() where user_id = ${userId} and id = ${id} returning *`; return rows[0] || null; }
   async deleteReceipt(userId, id) { const r = await this.getReceipt(userId, id); if (!r) return null; await this.sql`delete from receipt_line_items where user_id = ${userId} and receipt_id = ${id}`; await this.sql`delete from receipts where user_id = ${userId} and id = ${id}`; return r; }
-  async deletePriceHistory(userId) { const n = (await this.sql`delete from price_observations where user_id = ${userId} returning id`).length; await this.sql`delete from product_mappings where user_id = ${userId}`; return n; }
+  async deletePriceHistory(userId) { const n = (await this.sql`delete from price_observations where user_id = ${userId} returning id`).length; await this.sql`delete from product_mappings where user_id = ${userId}`; await this.sql`delete from app_documents where user_id = ${userId} and collection in ('priceobs', 'offers')`; return n; }
   async deleteHealth(userId) { for (const n of HEALTH_TABLES) await this.sql.query(`delete from ${n} where user_id = $1`, [userId]); }
   async exportAll(userId) { const out = {}; for (const n of TABLES) out[n] = n === 'users' ? await this.sql`select * from users where id = ${userId}` : await this.sql.query(`select * from ${n} where user_id = $1`, [userId]); return out; }
   async blobKeys(userId) { return (await this.sql`select image_blob_key from receipts where user_id = ${userId} and image_blob_key is not null`).map(r => r.image_blob_key); }

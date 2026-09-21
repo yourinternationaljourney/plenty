@@ -1,5 +1,7 @@
 # Supermarket price sources (foundation only)
 
+> v2.2 adds the in-app comparison (`src/18-compare-engine.js`, `src/19-compare-ui.js`); see `docs/PRICE-COMPARISON.md`. The client-side `RETAILER_ADAPTERS` mirror this registry with status `planned`.
+
 This phase ships the interface, the registry and the database tables. **No retailer is contacted, scraped or called.** Every provider is registered with status `planned`, and calling one throws "not connected in this phase".
 
 ## Registry

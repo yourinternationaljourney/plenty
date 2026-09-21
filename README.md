@@ -109,6 +109,10 @@ Settings → Your data offers: export a backup (optionally encrypted when it con
 
 Starter recipes show real food photographs from Wikimedia Commons, each with the photographer and licence (CC0, CC BY 2.0, CC BY-SA 4.0) credited on the image and linked to the file page. The records live in `STARTER_PHOTOS` (`src/8-discover-engine.js`) with `imageUrl`, `imageAlt`, `imageCredit`, `imageCreditUrl`, `imageLicense`, `imageLicenseUrl` and `imageProvider`. Remote images are only displayed from approved providers whose terms permit embedding (Wikimedia Commons, Unsplash, Pexels, Spoonacular); anything else falls back to Plenty's own procedurally drawn food tile. No AI-generated images are used.
 
+## Supermarket price comparison (v2.2)
+
+The Groceries tab has three internal segments: **My list**, **Compare stores** and **Search products**. Choose your market and preferred supermarkets in Settings; Plenty compares the whole list and offers Easiest, Recommended and Cheapest baskets, labels every price with its source and date, and never invents a price. Prices currently come from receipts you confirm and prices you enter; retailer connections are planned behind Netlify Functions and are not live. Details: `docs/PRICE-COMPARISON.md`.
+
 ## Netlify deployment and accounts (v2.1)
 
 Netlify hosts the same static build and adds an optional account layer; GitHub remains the source repository and the GitHub Pages deployment keeps working as a local-only fallback.

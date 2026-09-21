@@ -39,7 +39,7 @@ async function boot(){
   const col=(name,target)=>db.collection(name).onSnapshot(snap=>{const o={};snap.docs.forEach(d=>{o[d.id]=clone(d.data());o[d.id].id=d.id});S[target]=o;render()},e=>console.warn(name,e));
   if(db){S.ui.storage='cloud';
     db.doc('app/settings').onSnapshot(snap=>{if(snap.exists)S.settings={...DEFAULT_SETTINGS,...clone(snap.data()),targets:{...DEFAULT_SETTINGS.targets,...((snap.data()||{}).targets||{})}};S.loaded=true;renderNav();render()},e=>console.warn(e));
-    col('recipes','recipes');col('items','items');col('inventory','inventory');col('prices','prices');
+    col('recipes','recipes');col('items','items');col('inventory','inventory');col('prices','prices');col('products','products');col('storeproducts','storeproducts');col('priceobs','priceobs');col('offers','offers');
     db.doc('app/health').onSnapshot(snap=>{if(snap.exists)S.health={...EMPTY_HEALTH(),...clone(snap.data())};render()},e=>console.warn(e));
     db.doc('app/checkins').onSnapshot(snap=>{if(snap.exists)S.checkins=clone(snap.data());render()},e=>console.warn(e));
     db.doc('app/history').onSnapshot(snap=>{if(snap.exists)S.history={viewed:[],cooked:[],...clone(snap.data())};render()},e=>console.warn(e));
@@ -55,7 +55,7 @@ async function boot(){
 }
 async function loadProfileState(){const s=await Store.get('app/settings');S.settings={...DEFAULT_SETTINGS,...(s||{}),targets:{...DEFAULT_SETTINGS.targets,...((s||{}).targets||{})}};
   const withId=o=>{for(const k in o)if(o[k]&&typeof o[k]==='object')o[k].id=o[k].id||k;return o};
-  S.recipes=withId(await Store.list('recipes'));S.items=withId(await Store.list('items'));S.inventory=withId(await Store.list('inventory'));S.weeks=await Store.list('weeks');S.prices=await Store.list('prices');S.chats=await Store.list('chat');
+  S.recipes=withId(await Store.list('recipes'));S.items=withId(await Store.list('items'));S.inventory=withId(await Store.list('inventory'));S.weeks=await Store.list('weeks');S.prices=await Store.list('prices');S.chats=await Store.list('chat');S.products=withId(await Store.list('products'));S.storeproducts=withId(await Store.list('storeproducts'));S.priceobs=withId(await Store.list('priceobs'));S.offers=withId(await Store.list('offers'));
   const hh=await Store.get('app/history');S.history={viewed:[],cooked:[],...(hh||{})};const hp=await Store.get('app/health');S.health=hp?{...EMPTY_HEALTH(),...hp}:null;S.checkins=await Store.get('app/checkins')}
 const hasContent=w=>Object.keys(w.slots||{}).length||(w.extras||[]).length||(w.trips||[]).length||Object.keys(w.buy||{}).length;
 if(hot&&typeof hot.snapshot==='function')hot.snapshot(()=>({tab:S.ui.tab,weekKey:S.ui.weekKey}));
@@ -120,7 +120,7 @@ function viewHome(){
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline"><h3>Where the week's money goes</h3><span class="small muted num">${Math.round(pct)}% of budget committed</span></div>
     <div class="stack" style="margin:12px 0 6px" role="img" aria-label="Budget split">${GROUPS.map(k=>`<i style="width:${B.groups[k].actual/Math.max(B.budget,B.actual+B.buffer,1)*100}%;background:${k==='pet'?'var(--pet)':k==='meals'?'var(--accent)':k==='staples'?'var(--accent-line)':k==='snacks'?'var(--warn)':k==='household'?'var(--ink3)':'var(--line2)'}" title="${esc(GROUP_LABEL(k))}: ${money(B.groups[k].actual)}"></i>`).join('')}<i style="width:${B.buffer/Math.max(B.budget,B.actual+B.buffer,1)*100}%;background:repeating-linear-gradient(45deg,var(--line2) 0 3px,transparent 3px 6px)" title="Buffer"></i></div>
     <div class="bd" style="margin-top:10px">${groupRows}
-      <div class="kv total"><span>Total estimated grocery spend</span><b class="num">${money(B.actual)}</b></div>
+      <div class="kv total"><span>Total estimated grocery spend</span><b class="num">${money(B.actual)}</b></div>${basketBudgetLineHtml()}
       <div class="kv"><span>Available for planned recipes<span class="sub">budget − buffer − normalized cost of everything else</span></span><b class="num">${money(B.availableForMeals)}</b></div>
       <div class="kv"><span>Recipes in the plan cost</span><b class="num ${B.groups.meals.actual>B.availableForMeals?'':''}" style="${B.groups.meals.actual>B.availableForMeals?'color:var(--bad)':''}">${money(B.groups.meals.actual)}</b></div>
     </div>
@@ -206,10 +206,12 @@ function viewRecipes(){
 function viewGroceries(){
   const B=budgetSummary();const L=B.lines;const toBuy=L.filter(l=>!(l.atHome&&l.atHome.all)&&!l.staple);const staples=L.filter(l=>l.staple&&!(l.atHome&&l.atHome.all));const home=L.filter(l=>l.atHome&&l.atHome.all);
   const done=toBuy.filter(l=>l.checked);const groups={};for(const l of toBuy)(groups[l.category]=groups[l.category]||[]).push(l);
-  const line=l=>`<div class="gi ${l.checked?'done':''}"><label><input type="checkbox" data-action="check" data-key="${esc(l.key)}" ${l.checked?'checked':''}><span class="q num">${esc(fmtBase(l.needBase,l.fam))}</span><span class="n">${l.priority?`<span class="pri ${l.priority}" title="${l.priority}"></span> `:''}${esc(l.name)}${l.pack?` <span class="faint small">· ${esc(l.pack)}</span>`:''}<small>${esc(l.sources.join(', '))}${l.atHome?` · ${esc(l.atHome.label)}`:''}${l.items.length&&l.items[0].store?` · ${esc(l.items[0].store)}`:''}</small></span></label><span class="price num">${l.cost?money(l.cost):''}</span>${l.items.length?`<button class="mini" data-action="postpone" data-id="${esc(l.items[0].id)}" title="Skip this week">Postpone</button>`:l.extras?`<button class="mini" data-action="remove-extra" data-id="${esc(l.extras[0].id)}">Remove</button>`:`<button class="mini" data-action="have-line" data-name="${esc(l.name)}" data-cat="${esc(l.category)}" title="I already have this">Have it</button>`}</div>`;
-  return `<div class="head"><div>${weekHead('Grocery list')}<div class="sub">${toBuy.length?`${done.length} of ${toBuy.length} picked up · one line per product · ${home.length} already at home`:'Plan meals or add items and the list builds itself.'}</div></div>
+  const line=l=>`<div class="gi ${l.checked?'done':''}"><label><input type="checkbox" data-action="check" data-key="${esc(l.key)}" ${l.checked?'checked':''}><span class="q num">${esc(fmtBase(l.needBase,l.fam))}</span><span class="n">${l.priority?`<span class="pri ${l.priority}" title="${l.priority}"></span> `:''}${esc(l.name)}${l.pack?` <span class="faint small">· ${esc(l.pack)}</span>`:''}<small>${esc(l.sources.join(', '))}${l.atHome?` · ${esc(l.atHome.label)}`:''}${l.items.length&&l.items[0].store?` · ${esc(l.items[0].store)}`:''}</small></span></label><span class="price num">${l.cost?money(l.cost):''}</span><button class="mini" data-action="line-compare" data-key="${esc(l.key)}" title="Compare prices at your stores">Compare</button>${l.items.length?`<button class="mini" data-action="postpone" data-id="${esc(l.items[0].id)}" title="Skip this week">Postpone</button>`:l.extras?`<button class="mini" data-action="remove-extra" data-id="${esc(l.extras[0].id)}">Remove</button>`:`<button class="mini" data-action="have-line" data-name="${esc(l.name)}" data-cat="${esc(l.category)}" title="I already have this">Have it</button>`}</div>`;
+  const seg=S.ui.gseg||'list';const head=`<div class="head"><div>${weekHead('Grocery list')}<div class="sub">${toBuy.length?`${done.length} of ${toBuy.length} picked up · one line per product · ${home.length} already at home`:'Plan meals or add items and the list builds itself.'}</div></div>
     <div class="actions"><button class="btn ghost" data-action="uncheck-all" ${done.length?'':'disabled'}>Uncheck all</button><button class="btn" data-action="copy-list" ${toBuy.length?'':'disabled'}>Copy list</button><button class="btn primary" data-action="log-shop" data-amount="${B.actual.toFixed(2)}">Log checkout</button></div></div>
-  <div class="gwrap"><div>
+  `+groceriesSegmentsHtml(seg);
+  if(seg==='compare')return head+compareViewHtml(B);if(seg==='search')return head+searchViewHtml();
+  return head+`<div class="gwrap"><div>
     ${toBuy.length===0&&staples.length===0?`<div class="empty"><h3>Nothing to buy</h3><div>Add meals on the Plan tab, or an item on the right.</div></div>`:''}
     ${CATS.filter(c=>groups[c]).map(c=>`<section class="aisle card"><div class="ah"><span class="eyebrow">${c}</span><span class="small faint num">${money(groups[c].reduce((a,l)=>a+l.cost,0))}</span></div>${groups[c].map(line).join('')}</section>`).join('')}
     ${staples.length?`<section class="aisle card"><div class="ah"><span class="eyebrow">Pantry staples · check before you go</span><span class="small faint">used in recipes</span></div>${staples.map(line).join('')}</section>`:''}
@@ -220,7 +222,7 @@ function viewGroceries(){
     <div class="card"><div class="eyebrow">This week</div>
       ${GROUPS.filter(k=>B.groups[k].actual>0).map(k=>`<div class="kv"><span>${esc(GROUP_LABEL(k))}</span><b class="num">${money(B.groups[k].actual)}</b></div>`).join('')}
       <div class="kv"><span>Buffer</span><b class="num">${money(B.buffer)}</b></div>
-      <div class="kv total"><span>Estimated checkout</span><b class="num">${money(B.actual)}</b></div>
+      <div class="kv total"><span>Estimated checkout</span><b class="num">${money(B.actual)}</b></div>${basketBudgetLineHtml()}
       <div class="kv"><span>${B.remaining>=0?'Under budget by':'Over budget by'}</span><b class="num" style="color:${B.remaining>=0?'var(--good)':'var(--bad)'}">${money(Math.abs(B.remaining))}</b></div>
       ${(()=>{const notes=listHealthNotes(L);return notes.length?`<div class="eyebrow" style="margin:10px 0 4px">Health notes</div><div style="display:flex;flex-wrap:wrap;gap:4px">${notes.map(n=>`<span class="chip ${/No |more sweets|Most proteins|reduce/.test(n)?'acc':'good'}">${esc(n)}</span>`).join('')}</div><div class="small faint" style="margin-top:4px">Notes only; nothing is removed from the list. <button class="btn sm ghost" data-action="tab" data-tab="health" style="padding:1px 5px">Health check</button></div>`:''})()}
       ${B.overBy>0&&B.suggestions.length?`<div class="note bad" style="margin-top:8px">Try postponing ${B.suggestions.map(c=>`<b>${esc(c.line.name)}</b>`).join(', ')} to save ${money(B.saved)}.</div>`:''}
