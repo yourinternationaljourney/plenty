@@ -1,6 +1,6 @@
 {
   "name": "plenty",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "Plenty: a local-first weekly grocery, food, household and budget planner. Installable PWA; optional Netlify account for a private server copy.",
   "scripts": {

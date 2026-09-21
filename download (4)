@@ -1,0 +1,31 @@
+# secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# build output (built by GitHub Actions; keep the repo source-only)
+dist/
+plenty.html
+
+# personal data: never commit profiles, health information, receipts, images, databases or backups
+*.plenty-backup.json
+plenty-backup-*.json
+plenty-prototype-backup-*.json
+backups/
+receipts/
+*.sqlite
+*.db
+seed/local/
+data/
+
+# tooling
+node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Netlify CLI state
+.netlify/
