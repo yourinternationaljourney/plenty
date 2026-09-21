@@ -95,3 +95,13 @@ dist/                      built by `npm run build`
 - **Live recipe providers**: `HttpProvider` already targets a proxy; add providers by implementing `search/featured/details/importUrl` and a normalizer.
 - **Push notifications**: the service worker is in place; notifications need a push service and user consent.
 - **App stores**: the PWA can be wrapped (PWABuilder / Trusted Web Activity) without code changes.
+
+## 5. Status after migration (2026-09-20)
+
+Implemented in this repository (v2.0.0): steps 1–8 of the plan. `npm test` runs 35 tests (23 inherited, 12 standalone) and `npm run build` produces `dist/` with the personal-data and secret guard.
+
+Verified in a browser served from a `/plenty/` subpath (`npm run serve`), following the brief's scenario: new user → onboarding as Simone with the pet Dobby → weekly plan with a one-serving recipe → grocery list and budget update (spinach 50 g, checkout +€1.40) → pet food added changes the budget (+€28) but not one Health Check indicator → shopping trip logged → reload keeps everything (IndexedDB) → encrypted backup exported (33 KB) → delete all data returns to onboarding → import restores 54 documents, pet, plan, receipt and health goals → deleting the database (a clean browser profile) starts at empty onboarding with no mention of Simone or Dobby.
+
+Not verifiable from this environment and left for the owner: pushing to GitHub and enabling Pages (no remote exists yet; `gh` is not installed here), and installation tests on Android Chrome, iPhone Safari and desktop Chrome. The embedded preview browser does not run service workers, so the offline and update paths were checked by tests on the built `sw.js` (precache list, scope, `SKIP_WAITING`) and by serving `sw.js`, the manifest and icons with correct content types, not by an end-to-end install.
+
+Known limits of v2.0.0: interface language is English (the language preference is stored); receipt photos can be attached to quick-entry trips and removed, but the line-item confirmation screen does not attach photos; automatic receipt reading, the coach, recipe generation and live recipe search are unavailable without a secure service and say so.
