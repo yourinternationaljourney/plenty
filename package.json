@@ -1,0 +1,18 @@
+{
+  "name": "plenty",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Plenty: a local-first weekly grocery, food, household and budget planner. Installable PWA, no account, no server.",
+  "scripts": {
+    "build": "node build.js",
+    "build:artifact": "node build.js --artifact",
+    "check": "node build.js --check-only",
+    "test": "node --test",
+    "serve": "node tools/serve.js",
+    "server": "node server/index.js",
+    "release": "npm version minor -m \"Release v%s\""
+  },
+  "engines": { "node": ">=18" },
+  "repository": { "type": "git", "url": "" },
+  "license": "UNLICENSED"
+}

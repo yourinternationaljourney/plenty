@@ -1,0 +1,66 @@
+/* ================= Coach: prompt, validation, application ================= */
+function coachContext(){const s=S.settings;const B=budgetSummary();const wk=week();const pn=petName();
+  const recipes=recipeList().map(r=>`${r.id} | ${r.name} | ${(r.mealTypes||['dinner']).join('/')} | ${(r.tags||[]).join(',')} | ${r.minutes} min | makes ${r.servings} | ${r.nutrition?r.nutrition.kcal+' kcal, '+r.nutrition.protein+' g protein':'no nutrition'} | ${money(recipeCost(r))}/serving${r.favorite?' | favourite':''}`).join('\n');
+  const items=Object.values(S.items).map(it=>{const d=itemDue(it,wk);const c=itemCosts(it);const st=isMulti(it)?petStatus(it):null;return `${it.id} | ${it.name} | ${it.kind} | ${it.category} | ${it.priority||'preferred'} | ${it.frequency||'weekly'} | ${st?`package ${it.packageSize} ${it.packageUnit} at ${money(it.packagePrice)}, ${fmtBase(st.remaining,famOf(it.packageUnit))} left, runs out ${fmtDate(st.runOut)}, ${money(st.weekly)}/wk avg`:`${it.qty||1} ${it.unit||''} at ${money(it.price||0)}${it.inStock?', in stock':''}`} | ${d.due?'DUE this week':'not due ('+d.why+')'}${it.store?' | '+it.store:''}`}).join('\n');
+  const inv=Object.values(S.inventory).map(v=>`${v.name}${v.qty?' '+fmtQty(+v.qty,v.unit):' (enough)'} [${v.location}]`).join('; ');
+  const plan=[...Array(7).keys()].map(d=>{const parts=[];for(const m of activeMeals()){const es=slotEntries(wk,d,m);if(es.length)parts.push(`${m}: ${es.map(e=>e.t==='r'?(S.recipes[e.id]||{}).name+' ×'+(e.sv||1):e.t==='l'?'leftovers of '+((S.recipes[e.of]||{}).name||'?'):(S.items[e.id]||{}).name).join(' + ')}`)}return `${DAYS[d]}: ${parts.join('; ')||'—'}`}).join('\n');
+  const extras=(wk.extras||[]).map(x=>`${x.name} ${x.qty||''} ${x.unit||''} ${money(x.price||0)} (${x.priority||'optional'})`).join('; ');
+  const list=B.toBuy.slice(0,60).map(l=>`${l.name} ${fmtBase(l.needBase,l.fam)} ${money(l.cost)}${l.priority?' ['+l.priority+']':''}`).join('; ');
+  return `SETTINGS: ${s.people} person(s); currency ${s.currency}; weekly grocery budget ${money(s.weeklyBudget)} covering EVERYTHING bought at the store; buffer ${money(s.buffer)} to keep free; shopping day ${DAYS_LONG[s.shopDay==null?6:s.shopDay]}; store ${s.store||'any'}; pet ${pn}; plan targets per week ${MEAL_TYPES.map(m=>m+' '+(s.targets[m]||0)).join(', ')}; daily targets ${s.kcalTarget} kcal / ${s.proteinTarget} g protein (user only, never the pet); preferences: ${s.diet||'none given'}.
+WEEK ${S.ui.weekKey} (Mon–Sun). BUDGET NOW: estimated checkout ${money(B.actual)}; normalized weekly ${money(B.normalized)}; remaining after buffer ${money(B.remaining)}; available for recipes ${money(B.availableForMeals)}; recipes currently ${money(B.groups.meals.actual)}; groups: ${GROUPS.map(g=>GROUP_LABEL(g)+' '+money(B.groups[g].actual)+(Math.abs(B.groups[g].normalized-B.groups[g].actual)>0.5?' (avg '+money(B.groups[g].normalized)+')':'')).join(', ')}${B.overBy>0?'; OVER BUDGET by '+money(B.overBy):''}${B.dueMulti.length?'; long-lasting purchase due this week: '+B.dueMulti.map(i=>i.name).join(', '):''}.
+RECIPE BOX (id | name | meal types | tags | time | makes | nutrition/serving | cost/serving):
+${recipes||'(empty)'}
+REGULAR ITEMS (id | name | kind | category | priority | frequency | cost | status):
+${items||'(none)'}
+AT HOME: ${inv||'(nothing recorded)'}
+CURRENT PLAN:
+${plan}
+ONE-OFF EXTRAS: ${extras||'none'}
+GROCERY LIST TO BUY (consolidated, at-home already excluded): ${list||'empty'}
+${healthCoachContext()}`}
+const COACH_RULES=()=>`You are Plenty's grocery coach for one household. You reason about the COMPLETE grocery week: recipes for every planned meal type, breakfast and lunch staples, fruit, snacks, drinks, coffee/tea, pantry restocking, ${petName()}'s supplies, household items, one-off extras and the buffer. Never treat dinners as the whole budget.
+HARD RULES: never propose skipping or reducing ${petName()}'s essential food or any item marked essential to fix a budget problem; cut optional items first, then preferred. Keep the buffer free. Never mix ${petName()}'s food with the user's calories or diet. Prefer reusing ingredients across recipes, leftovers for lunches, and recurring breakfasts (the same breakfast on several days is good). Respect what is AT HOME (do not buy it). Use only recipe ids and item ids that exist; to add a recipe that does not exist, use a new_recipe action with full details and prices. Quantities and money are estimates; the app recalculates the real totals after changes are applied.
+Reply with ONLY a JSON object: {"reply": string (plain text for the user, short paragraphs or "- " bullets; explain the plan, category totals, remaining budget, what is essential vs optional, and suggested savings when relevant), "actions": [ ...zero or more of:
+{"type":"set_slot","day":0-6,"meal":"breakfast|lunch|dinner|snack|drink|treat","recipeId":id,"servings":number,"replace":true} | {"type":"set_slot","day":n,"meal":m,"leftoversOf":recipeId} | {"type":"set_slot","day":n,"meal":m,"itemId":id} | {"type":"clear_slot","day":n,"meal":m} | {"type":"set_item_buy","itemId":id,"buy":true|false} | {"type":"add_extra","name":s,"qty":n,"unit":s,"category":s,"price":n,"priority":"essential|preferred|optional"} | {"type":"remove_extra","name":s} | {"type":"add_inventory","name":s,"qty":n,"unit":s,"location":"Pantry|Fridge|Freezer|Drinks|Pet|Household"} | {"type":"remove_inventory","name":s} | {"type":"set_budget","amount":n} | {"type":"set_buffer","amount":n} | {"type":"set_store","store":s} | {"type":"add_item","name":s,"kind":"grocery|household|pet","category":s,"qty":n,"unit":s,"price":n,"frequency":"weekly|biweekly|monthly|asneeded","priority":s} | {"type":"update_item","itemId":id,"patch":{"inStock":bool,"priority":s,"frequency":s,"price":n,"store":s,"remaining":n}} | {"type":"new_recipe","recipe":{recipe object with name, mealTypes, tags, minutes, servings, ingredients[{qty,unit,name,category,price}], steps, nutrition{kcal,protein,carbs,fat}, notes}} ]}.
+${HEALTH_COACH_RULES()}
+When the user asks for a full week plan, return set_slot actions for every planned slot that is empty (and replace filled ones only if asked), using "replace":true for breakfast/lunch/dinner. When the user states what they have, use add_inventory. Use set_item_buy true when they say ${petName()} needs a new bag. Only propose actions the user asked for or that clearly serve the request; questions get a reply with no actions.`;
+function validateAction(a){const pn=petName();if(!a||typeof a!=='object')return {ok:false,why:'Malformed'};
+  switch(a.type){
+    case 'set_slot':{if(!(a.day>=0&&a.day<=6)||!MEAL_TYPES.includes(a.meal))return {ok:false,why:'Unknown day or meal'};if(a.recipeId&&!S.recipes[a.recipeId])return {ok:false,why:'Recipe not in your box'};if(a.leftoversOf&&!S.recipes[a.leftoversOf])return {ok:false,why:'Recipe not in your box'};if(a.itemId&&!S.items[a.itemId])return {ok:false,why:'Item not found'};if(!a.recipeId&&!a.leftoversOf&&!a.itemId)return {ok:false,why:'Nothing to place'};return {ok:true}}
+    case 'clear_slot':return (a.day>=0&&a.day<=6&&MEAL_TYPES.includes(a.meal))?{ok:true}:{ok:false,why:'Unknown day or meal'};
+    case 'set_item_buy':{const it=S.items[a.itemId];if(!it)return {ok:false,why:'Item not found'};if(a.buy===false&&(it.priority||'preferred')==='essential')return {ok:false,why:it.kind==='pet'?`Blocked: ${pn}'s essential supply is never postponed`:'Blocked: essential items are never postponed'};return {ok:true}}
+    case 'add_extra':return a.name?{ok:true}:{ok:false,why:'No name'};
+    case 'remove_extra':return (week().extras||[]).some(x=>canon(x.name)===canon(a.name))?{ok:true}:{ok:false,why:'Not on the list'};
+    case 'add_inventory':return a.name?{ok:true}:{ok:false,why:'No name'};
+    case 'remove_inventory':return Object.values(S.inventory).some(v=>canon(v.name)===canon(a.name))?{ok:true}:{ok:false,why:'Not in At Home'};
+    case 'set_budget':return +a.amount>0?{ok:true}:{ok:false,why:'Amount must be positive'};
+    case 'set_buffer':return +a.amount>=0?{ok:true}:{ok:false,why:'Amount must be zero or more'};
+    case 'set_store':return a.store?{ok:true}:{ok:false,why:'No store'};
+    case 'add_item':return a.name?{ok:true}:{ok:false,why:'No name'};
+    case 'update_item':{const it=S.items[a.itemId];if(!it)return {ok:false,why:'Item not found'};const p=a.patch||{};if(it.kind==='pet'&&(it.priority||'preferred')==='essential'&&p.priority&&p.priority!=='essential')return {ok:false,why:`Blocked: ${pn}'s food stays essential`};return {ok:true}}
+    case 'new_recipe':return a.recipe&&a.recipe.name&&Array.isArray(a.recipe.ingredients)&&a.recipe.ingredients.length?{ok:true}:{ok:false,why:'Recipe incomplete'};
+    default:return {ok:false,why:'Unknown change type'}}}
+function applyActions(actions){const results=[];const wk=week();let weekDirty=false,settingsPatch={};
+  for(const a of actions){const v=validateAction(a);if(!v.ok){results.push({ok:false,why:v.why});continue}
+    try{switch(a.type){
+      case 'set_slot':{const entry=a.recipeId?{t:'r',id:a.recipeId,sv:Math.max(1,Math.round(+a.servings||S.settings.people||1))}:a.leftoversOf?{t:'l',of:a.leftoversOf}:{t:'i',id:a.itemId};addEntry(+a.day,a.meal,entry,a.replace!==false);weekDirty=true;break}
+      case 'clear_slot':{if(wk.slots&&wk.slots[a.day])delete wk.slots[a.day][a.meal];weekDirty=true;break}
+      case 'set_item_buy':{wk.buy=wk.buy||{};wk.buy[a.itemId]=!!a.buy;weekDirty=true;break}
+      case 'add_extra':{wk.extras=wk.extras||[];wk.extras.push({id:uid('x'),name:String(a.name),qty:+a.qty||1,unit:UNITS.includes(a.unit)?a.unit:'pcs',category:CATS.includes(a.category)?a.category:guessCat(a.name),price:Math.round((+a.price||0)*100)/100,priority:PRIOS.includes(a.priority)?a.priority:'optional'});weekDirty=true;break}
+      case 'remove_extra':{wk.extras=(wk.extras||[]).filter(x=>canon(x.name)!==canon(a.name));weekDirty=true;break}
+      case 'add_inventory':{const ex=Object.values(S.inventory).find(v=>canon(v.name)===canon(a.name));const v=ex?{...ex}:{id:uid('h'),name:String(a.name)};v.qty=+a.qty||0;v.unit=UNITS.includes(a.unit)?a.unit:(a.unit?String(a.unit):'');v.location=LOCS.includes(a.location)?a.location:(CAT_LOC[guessCat(a.name)]||'Pantry');saveInv(v);break}
+      case 'remove_inventory':{for(const v of Object.values(S.inventory))if(canon(v.name)===canon(a.name))deleteInv(v.id);break}
+      case 'set_budget':settingsPatch.weeklyBudget=Math.round(+a.amount*100)/100;break;
+      case 'set_buffer':settingsPatch.buffer=Math.round(+a.amount*100)/100;break;
+      case 'set_store':settingsPatch.store=String(a.store);break;
+      case 'add_item':{const kind=['grocery','household','pet'].includes(a.kind)?a.kind:'grocery';saveItem({id:uid('i'),name:String(a.name),kind,category:CATS.includes(a.category)?a.category:(kind==='pet'?'Pet':guessCat(a.name)),qty:+a.qty||1,unit:UNITS.includes(a.unit)?a.unit:'pcs',price:Math.round((+a.price||0)*100)/100,frequency:FREQS.some(f=>f[0]===a.frequency)?a.frequency:'weekly',priority:PRIOS.includes(a.priority)?a.priority:(kind==='pet'?'essential':'preferred'),inStock:false,brand:'',store:''});break}
+      case 'update_item':{const it={...S.items[a.itemId]};const p=a.patch||{};if('inStock' in p)it.inStock=!!p.inStock;if(PRIOS.includes(p.priority))it.priority=p.priority;if(FREQS.some(f=>f[0]===p.frequency))it.frequency=p.frequency;if(p.price!=null&&!isNaN(+p.price))it.price=+p.price;if(p.store!=null)it.store=String(p.store);if(p.remaining!=null&&!isNaN(+p.remaining)&&isMulti(it)){it.remaining=+p.remaining;it.remainingAsOf=iso(today())}saveItem(it);break}
+      case 'new_recipe':{const r=coerceRecipe(a.recipe);S.recipes[r.id]=r;writeDoc('recipes/'+r.id,r);a._createdId=r.id;break}}
+      results.push({ok:true})}catch(e){console.warn(e);results.push({ok:false,why:'Could not apply'})}}
+  if(weekDirty)saveWeek();if(Object.keys(settingsPatch).length)saveSettings(settingsPatch);render();return results}
+async function sendChat(text){if(!sampleFn||!text.trim()||S.ui.busy)return;const c=chat();c.turns.push({role:'user',content:text.trim()});S.ui.chatDraft='';S.ui.busy=true;saveChat();
+  const hist=c.turns.slice(-9,-1).map(t=>({role:t.role,content:t.role==='assistant'?(t.content+((t.actions||[]).length?`\n[proposed ${t.actions.length} change(s); ${t.applied?'applied':'not yet applied'}]`:'')):t.content}));
+  const input=[{role:'user',content:COACH_RULES()+'\n\n'+coachContext()},...hist,{role:'user',content:text.trim()}];
+  try{const j=await sampleFn.json(input,{cache:false});const reply=String((j&&j.reply)||'').trim()||'Here is what I suggest.';const actions=Array.isArray(j&&j.actions)?j.actions.filter(a=>a&&typeof a==='object'&&a.type).slice(0,60):[];c.turns.push({role:'assistant',content:reply,actions,applied:false})}
+  catch(e){c.turns.push({role:'assistant',content:aiErr(e),actions:[],applied:true,error:true})}
+  finally{S.ui.busy=false;saveChat();setTimeout(()=>{const m=document.querySelector('.composer');if(m)m.scrollIntoView({block:'end'})},50)}}

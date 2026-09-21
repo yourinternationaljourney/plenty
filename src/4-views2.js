@@ -1,0 +1,113 @@
+/* ================= Items (recurring + pet) ================= */
+function itemCard(it){const d=itemDue(it);const c=itemCosts(it);const st=isMulti(it)?petStatus(it):null;
+  return `<button class="ic" data-action="edit-item" data-id="${it.id}"><div class="t"><span class="nm"><span class="pri ${it.priority||'preferred'}" title="${it.priority||'preferred'}"></span> ${esc(it.name)}</span><span class="chip ${d.due?(it.kind==='pet'?'pet':'acc'):''}">${d.due?'This week':esc(d.why)}</span></div>
+  <div class="m"><span>${esc(it.category||'')}</span>${it.brand?`<span>${esc(it.brand)}</span>`:''}${it.store?`<span>${esc(it.store)}</span>`:''}<span>${st?`${fmtBase(+it.packageSize*famOf(it.packageUnit).factor,famOf(it.packageUnit))} pack · ${money(it.packagePrice)}`:`${fmtQty(+it.qty||1,it.unit)} · ${money(it.price||0)}`}</span><span>${esc((FREQS.find(f=>f[0]===(it.frequency||'weekly'))||[])[1]||'')}${it.inStock&&!st?' · in stock':''}</span></div>
+  ${st?`<div class="m"><span class="num">${fmtBase(st.remaining,famOf(it.packageUnit))} left${st.daysLeft<1?' · run out':' · runs out '+fmtDate(st.runOut)}</span><span class="num">${money(st.weekly)}/wk avg · lasts ${Math.round(st.weeksPer*10)/10} wks</span></div><div class="meter"><i class="pet ${st.pct<20?'over':''}" style="width:${st.pct}%"></i></div>`:c.normalized&&Math.abs(c.normalized-c.actual)>0.01?`<div class="m"><span class="num">${money(c.normalized)}/wk normalized</span></div>`:''}
+  </button>`}
+function viewItems(){
+  const all=Object.values(S.items);const pets=all.filter(i=>i.kind==='pet').sort((a,b)=>a.name.localeCompare(b.name));const groc=all.filter(i=>i.kind!=='pet').sort((a,b)=>prioRank(a.priority)-prioRank(b.priority)||a.name.localeCompare(b.name));
+  const B=budgetSummary();
+  const norm=k=>B.groups[k].normalized;
+  return `<div class="head"><div><div class="eyebrow">Regular groceries</div><h1>Items you buy again and again</h1><div class="sub">Not every grocery belongs to a recipe. These land on the same list and count toward the same budget.</div></div>
+    <div class="actions"><button class="btn" data-action="new-item" data-kind="pet">${ICONS.plus} ${esc(petName())} item</button><button class="btn primary" data-action="new-item" data-kind="grocery">${ICONS.plus} Regular item</button></div></div>
+  <div class="tiles">
+    <div class="tile"><div class="eyebrow">Due this week</div><div class="v num">${money(all.filter(i=>itemDue(i).due).reduce((a,i)=>a+itemCosts(i).actual,0))}</div><div class="d">${all.filter(i=>itemDue(i).due).length} of ${all.length} items</div></div>
+    <div class="tile"><div class="eyebrow">Average weekly</div><div class="v num">${money(GROUPS.filter(k=>k!=='meals').reduce((a,k)=>a+norm(k),0))}</div><div class="d">staples ${money(norm('staples'))} · snacks ${money(norm('snacks'))} · pantry ${money(norm('pantry'))}</div></div>
+    <div class="tile"><div class="eyebrow">${esc(petName())} average</div><div class="v num">${money(norm('pet'))}</div><div class="d">household ${money(norm('household'))} a week</div></div>
+  </div>
+  ${all.length===0?starterEmpty():''}
+  ${groc.length?`<h3 style="margin:6px 0 10px">Groceries & household</h3><div class="igrid" style="margin-bottom:22px">${groc.map(itemCard).join('')}</div>`:''}
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px"><h3>${esc(petName())}'s supplies</h3><span class="small muted">Tracked separately from your own food.</span></div>
+  ${pets.length?`<div class="igrid">${pets.map(itemCard).join('')}</div>`:`<div class="empty"><div>Add dry food, wet food, treats, dental chews, waste bags or supplements. Long-lasting bags show a run-out date and a normalized weekly cost.</div><div class="actions"><button class="btn" data-action="new-item" data-kind="pet">Add ${esc(petName())}'s food</button></div></div>`}`}
+
+/* ================= At Home ================= */
+function viewAtHome(){
+  const all=Object.values(S.inventory).sort((a,b)=>LOCS.indexOf(a.location)-LOCS.indexOf(b.location)||a.name.localeCompare(b.name));const groups={};for(const v of all)(groups[v.location||'Pantry']=groups[v.location||'Pantry']||[]).push(v);
+  const B=budgetSummary();
+  return `<div class="head"><div><div class="eyebrow">At Home</div><h1>What you already have</h1><div class="sub">Anything here is skipped on the grocery list, or reduced by the amount you have. ${B.atHome.length?`Saving about ${money(B.atHome.reduce((a,l)=>a+(l.fullCost-l.cost),0))} this week.`:''}</div></div>
+    <div class="actions"><button class="btn primary" data-action="new-inv">${ICONS.plus} Add to At Home</button></div></div>
+  <form class="card pad" id="invQuick" autocomplete="off" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+    <div class="field" style="flex:2;min-width:160px"><label for="qn">Quick add</label><input id="qn" name="name" placeholder="e.g. 6 eggs, half a loaf of bread, tea" required></div>
+    <div class="field" style="width:80px"><label for="qq">Qty</label><input id="qq" name="qty" type="number" step="any" min="0" placeholder="—"></div>
+    <div class="field" style="width:90px"><label for="qu">Unit</label><select id="qu" name="unit">${UNITS.map(u=>`<option value="${u}" ${u===''?'selected':''}>${u||'—'}</option>`).join('')}</select></div>
+    <div class="field" style="width:130px"><label for="ql">Where</label><select id="ql" name="location">${LOCS.map(l=>`<option>${l}</option>`).join('')}</select></div>
+    <button class="btn" type="submit">Add</button>
+    <div class="small faint" style="flex-basis:100%">Leave quantity empty to mean "I have enough of this" so the whole line is skipped.</div>
+  </form>
+  ${all.length?LOCS.filter(l=>groups[l]).map(l=>`<section class="aisle card"><div class="ah"><span class="eyebrow">${l}</span><span class="small faint">${groups[l].length}</span></div>${groups[l].map(v=>`<div class="gi"><span class="q num">${v.qty?esc(fmtQty(+v.qty,v.unit)):'<span class="faint">enough</span>'}</span><span class="n">${esc(v.name)}${v.note?`<small>${esc(v.note)}</small>`:''}</span><button class="mini" data-action="edit-inv" data-id="${v.id}">Edit</button><button class="mini" data-action="del-inv" data-id="${v.id}" title="Used up">Used up</button></div>`).join('')}</section>`).join('')
+  :`<div class="empty"><h3>Nothing recorded yet</h3><div>Add pantry staples like salt, oil and rice, what is in the fridge and freezer, drinks, ${esc(petName())}'s open bag, and household supplies.</div>${isEmptyData()?'<div class="actions"><button class="btn primary" data-action="load-starter">Load starter data</button></div>':''}</div>`}`}
+
+/* ================= Coach ================= */
+const QUICK=['Create my full grocery plan for this week under budget, with breakfast, lunch, dinner and snacks.','What can I remove without touching the essentials?','Use dinner leftovers for lunch where it makes sense.','How much of my budget goes to actual meals versus other groceries?','Give me work snacks that are healthy but not boring.','Can I afford salmon this week?','Am I eating reasonably balanced this week?','Could I eat less meat without losing protein variety?','Make this plan more cholesterol-conscious, within budget.','Suggest a healthier snack, but keep one treat.'];
+function fmtReply(t){return String(t||'').split(/\n{2,}/).map(par=>{const lines=par.split('\n');if(lines.every(l=>/^\s*[-•*]\s+/.test(l)))return '<ul>'+lines.map(l=>'<li>'+esc(l.replace(/^\s*[-•*]\s+/,''))+'</li>').join('')+'</ul>';return '<p>'+lines.map(esc).join('<br>')+'</p>'}).join('')}
+function describeAction(a){const r=id=>(S.recipes[id]||{}).name||id;const it=id=>(S.items[id]||{}).name||id;const day=d=>DAYS_LONG[+d]||d;
+  switch(a.type){
+    case 'set_slot':return `${day(a.day)} ${a.meal}: ${a.leftoversOf?'leftovers of '+r(a.leftoversOf):a.recipeId?r(a.recipeId)+(a.servings?` (cook ×${a.servings})`:''):a.itemId?it(a.itemId):a.name||'?'}${a.replace===false?' (added)':''}`;
+    case 'clear_slot':return `Clear ${day(a.day)} ${a.meal}`;
+    case 'set_item_buy':return `${a.buy?'Buy':'Postpone'} ${it(a.itemId)} this week`;
+    case 'add_extra':return `Add to list: ${a.qty||''} ${a.unit||''} ${a.name} (${money(a.price||0)}, ${a.priority||'optional'})`;
+    case 'remove_extra':return `Remove from list: ${a.name}`;
+    case 'add_inventory':return `At Home: ${a.qty?a.qty+' '+(a.unit||''):'have'} ${a.name}${a.location?' ('+a.location+')':''}`;
+    case 'remove_inventory':return `At Home: used up ${a.name}`;
+    case 'set_budget':return `Set weekly budget to ${money(a.amount)}`;
+    case 'set_buffer':return `Set buffer to ${money(a.amount)}`;
+    case 'set_store':return `Shop at ${a.store}`;
+    case 'add_item':return `New regular item: ${a.name} (${money(a.price||0)}, ${a.frequency||'weekly'}, ${a.priority||'preferred'})`;
+    case 'update_item':return `Update ${it(a.itemId)}: ${Object.entries(a.patch||{}).map(([k,v])=>k+' = '+v).join(', ')}`;
+    case 'new_recipe':return `New recipe: ${(a.recipe||{}).name||'?'}`;
+    default:return a.type}}
+function viewCoach(){
+  const c=chat();const B=budgetSummary();
+  return `<div class="head"><div>${weekHead('Coach')}<div class="sub">Talks about the whole grocery week: meals, staples, snacks, ${esc(petName())}, household and budget. It proposes changes; you apply them and Plenty recalculates.</div></div>
+    <div class="actions">${c.turns.length?`<button class="btn ghost" data-action="clear-chat">Clear conversation</button>`:''}</div></div>
+  <div class="chat"><div>
+    <div class="ai-block"><div class="quick">${QUICK.map(q=>`<button class="btn sm" data-action="quick" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>
+    <div class="msgs">${c.turns.length?c.turns.map((t,i)=>t.role==='user'?`<div class="msg user">${esc(t.content)}</div>`:`<div class="msg ai">${fmtReply(t.content)}${(t.actions||[]).length?`<div class="props"><div class="eyebrow">${t.applied?'Applied changes':'Proposed changes'}</div>${t.actions.map((a,j)=>{const chk=validateAction(a);return `<label class="prop ${chk.ok?'':'blocked'}"><input type="checkbox" data-turn="${i}" data-j="${j}" ${t.applied?'disabled '+(t.results&&t.results[j]&&t.results[j].ok?'checked':''):chk.ok?'checked':'disabled'}><span>${esc(describeAction(a))}${!chk.ok?`<br><span class="why">${esc(chk.why)}</span>`:t.applied&&t.results&&t.results[j]&&!t.results[j].ok?`<br><span class="why">${esc(t.results[j].why||'Not applied')}</span>`:''}</span></label>`}).join('')}${t.applied?'':`<div class="actions" style="margin-top:8px"><button class="btn sm primary" data-action="apply-turn" data-turn="${i}">Apply selected</button><button class="btn sm ghost" data-action="dismiss-turn" data-turn="${i}">Dismiss</button></div>`}</div>`:''}</div>`).join('')
+    :`<div class="msg ai"><p>Hi. I can see this week's plan, your recipe box, regular items, ${esc(petName())}'s supplies, what is at home and the budget. Ask me to build the whole week, trim it to budget, swap meals, or tell me what you already have.</p><p class="small muted">I never remove essential food or ${esc(petName())}'s essentials to solve a budget problem.</p></div>`}
+    ${S.ui.busy?`<div class="thinking"><span class="sp"></span>Thinking about your week…</div>`:''}</div>
+    <div class="ai-block"><div class="composer"><textarea id="chatIn" rows="1" placeholder="e.g. I already have six eggs and half a loaf. ${esc(petName())} needs food this week. Keep $5 free." data-input="chat">${esc(S.ui.chatDraft)}</textarea><button class="btn primary icon" style="width:46px;height:46px;border-radius:12px" data-action="send" aria-label="Send" ${S.ui.busy?'disabled':''}>${ICONS.send}</button></div></div>
+    ${sampleFn?'':`<div class="note" style="margin-top:12px">The coach needs Claude, which is not available on this copy of the page. Open the published artifact while signed in to Claude to use it.</div>`}
+  </div>
+  <aside class="side"><div class="card"><div class="eyebrow">Week at a glance</div>
+    <div class="kv"><span>Budget</span><b class="num">${money(B.budget)}</b></div><div class="kv"><span>Estimated checkout</span><b class="num">${money(B.actual)}</b></div><div class="kv"><span>Buffer</span><b class="num">${money(B.buffer)}</b></div><div class="kv total"><span>${B.remaining>=0?'Remaining':'Over'}</span><b class="num" style="color:${B.remaining>=0?'var(--good)':'var(--bad)'}">${money(Math.abs(B.remaining))}</b></div>
+    <div class="kv"><span>Available for recipes</span><b class="num">${money(B.availableForMeals)}</b></div><div class="kv"><span>Recipes cost</span><b class="num">${money(B.groups.meals.actual)}</b></div><div class="kv"><span>${esc(petName())} this week</span><b class="num">${money(B.groups.pet.actual)}</b></div></div>
+  <div class="card"><div class="eyebrow">Things you can say</div><ul class="small muted" style="margin:8px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:4px"><li>"I already have tea, rice and olive oil."</li><li>"${esc(petName())} needs a new bag of food this week."</li><li>"Keep $5 free in case I need something later."</li><li>"I want fruit every day."</li><li>"I'm shopping at Aldi this week."</li><li>"Use the frozen chicken first."</li></ul></div></aside></div>`}
+
+/* ================= Settings ================= */
+function viewSettings(){const s=S.settings;const gb=s.groupBudgets||{};const sum=GROUPS.reduce((a,k)=>a+(+gb[k]||0),0)+(+s.buffer||0);
+  return `<div class="head"><div><div class="eyebrow">Settings</div><h1>Budget, household & targets</h1><div class="sub">Changes save as you make them.</div></div></div>
+  <div class="grid2">
+    ${profileCardHtml()}
+    <div class="card pad"><h3 style="margin-bottom:12px">Weekly grocery budget</h3>
+      <div class="row"><div class="field"><label for="sBud">Total per week (${esc(s.currency)})</label><input id="sBud" type="number" min="0" step="1" value="${s.weeklyBudget}" data-setting="weeklyBudget"></div><div class="field"><label for="sBuf">Budget buffer (${esc(s.currency)})</label><input id="sBuf" type="number" min="0" step="1" value="${s.buffer}" data-setting="buffer"></div></div>
+      <p class="small muted" style="margin:8px 0 12px">The buffer is money kept free for things you notice in the store. It is never planned against.</p>
+      <div class="eyebrow" style="margin-bottom:6px">Suggested split (optional)</div>
+      <div class="bd">${GROUPS.map(k=>`<div class="row" style="grid-template-columns:1fr 110px"><label for="gb_${k}" class="small">${esc(GROUP_LABEL(k))}</label><input id="gb_${k}" type="number" min="0" step="1" value="${gb[k]||''}" placeholder="—" data-group-budget="${k}" style="padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--surface)"></div>`).join('')}</div>
+      <p class="small ${sum>s.weeklyBudget?'':'muted'}" style="margin-top:8px;${sum>s.weeklyBudget?'color:var(--bad)':''}">Split plus buffer: <b class="num">${money(sum)}</b> of ${money(s.weeklyBudget)}.</p>
+      <div class="field" style="margin-top:12px"><label for="sCur">Currency</label><select id="sCur" data-setting="currency">${CURRENCIES.map(c=>`<option ${c===s.currency?'selected':''}>${c}</option>`).join('')}</select></div></div>
+    <div class="card pad"><h3 style="margin-bottom:12px">Household & shopping</h3>
+      <div class="row"><div class="field"><label for="sPeople">People eating</label><input id="sPeople" type="number" min="1" max="12" value="${s.people}" data-setting="people"></div><div class="field"><label for="sShop">Usual shopping day</label><select id="sShop" data-setting="shopDay">${DAYS_LONG.map((d,i)=>`<option value="${i}" ${i===(s.shopDay==null?6:+s.shopDay)?'selected':''}>${d}</option>`).join('')}</select></div></div>
+      <div class="row" style="margin-top:8px"><div class="field"><label for="sStore">Preferred store</label><input id="sStore" value="${esc(s.store||'')}" placeholder="e.g. Aldi" data-setting="store"></div><div class="field"><label for="sLang">Language</label><select id="sLang" data-setting="language">${LANGUAGES.map(([v,l])=>`<option value="${v}" ${(s.language||'en')===v?'selected':''}>${l}</option>`).join('')}</select></div></div>
+      <p class="small muted" style="margin-top:8px">Recipe quantities scale to the number of people. Per meal you can still cook extra servings for leftovers.</p></div>
+    <div class="card pad"><h3 style="margin-bottom:12px">What to plan each week</h3>
+      <div class="bd">${MEAL_TYPES.map(m=>`<div class="row" style="grid-template-columns:1fr 110px"><label for="tg_${m}" class="small">${MEAL_LABEL[m]}s per week</label><input id="tg_${m}" type="number" min="0" max="21" value="${s.targets[m]||0}" data-target="${m}" style="padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--surface)"></div>`).join('')}</div>
+      <p class="small muted" style="margin-top:8px">Set 0 to hide a meal type from the plan. Recurring food is fine: the same breakfast can repeat Monday to Thursday, and a lunch can be leftovers.</p></div>
+    <div class="card pad"><h3 style="margin-bottom:12px">Your daily targets</h3>
+      <div class="row"><div class="field"><label for="sK">Energy (kcal)</label><input id="sK" type="number" min="800" step="50" value="${s.kcalTarget}" data-setting="kcalTarget"></div><div class="field"><label for="sP">Protein (g)</label><input id="sP" type="number" min="20" step="5" value="${s.proteinTarget}" data-setting="proteinTarget"></div></div>
+      <p class="small muted" style="margin-top:8px">Used for the bar under each day, from recipe meals only. ${esc(petName())}'s food is never counted here.</p>
+      <div class="field" style="margin-top:12px"><label>Allergies <span class="faint" style="font-weight:400">always enforced in Discover, the coach and AI recipes</span></label><div class="checks">${ALLERGENS.map(a=>`<label><input type="checkbox" data-allergy="${a}" ${(s.allergies||[]).includes(a)?'checked':''}>${a}</label>`).join('')}</div></div>
+      <div class="field" style="margin-top:12px"><label for="sDiet">Food preferences for the coach</label><textarea id="sDiet" data-setting="diet" placeholder="e.g. mostly vegetarian, no mushrooms, high protein, quick weeknight dinners, love Asian flavours">${esc(s.diet||'')}</textarea></div></div>
+    ${petsCardHtml()}
+    ${dataControlsHtml()}
+    ${pwaCardHtml()}
+    <div class="card pad"><h3 style="margin-bottom:12px">AI features</h3><p class="small muted">${sampleFn?'Claude is available on this page: the coach, recipe import and generation, estimates and receipt reading are on.':'This version runs without any AI service. The coach, recipe generation, estimates and automatic receipt reading show as unavailable; planning, grocery, budget, receipt and health calculations are all deterministic and work fully. A secure AI connection can be added later without changing the rest of the app (see MIGRATION.md).'}</p></div>
+    <div class="card pad"><h3 style="margin-bottom:12px">Health profile</h3><p class="small muted">Optional. Age, sex, height, weight, activity, goals, preferences and considerations, used only to word the Weekly Health Check and the coach's food suggestions. Weight loss is never assumed. Delete it at any time.</p><div class="actions" style="margin-top:12px"><button class="btn" data-action="health-profile">${hasHealthProfile()?'Edit health profile':'Add health profile'}</button><button class="btn ghost" data-action="tab" data-tab="health">Open Weekly Health Check</button></div></div>
+    <div class="card pad"><h3 style="margin-bottom:12px">Live recipes</h3>
+      <div class="field"><label for="sApi">Recipe service URL</label><input id="sApi" value="${esc(s.apiBase||'')}" placeholder="http://localhost:8787" data-setting="apiBase" inputmode="url"></div>
+      <p class="small muted" style="margin-top:8px">Discover uses your recipe box and Plenty's original starter recipes by default. Run the small service in the project's <b>server</b> folder with a Spoonacular key (see .env.example) and enter its address here to browse live internet recipes and import from URLs. The published Claude page cannot reach the internet itself, so this works when plenty.html is served next to that service. Keys never live in this page.</p>
+      <div class="small ${activeProvider().live?'':'muted'}" style="margin-top:8px">${activeProvider().live?'Live recipe service configured. Recipe data via spoonacular.com, shown with source links.':'Currently browsing starter recipes only.'}</div>
+      <p class="small muted" style="margin-top:8px">Hidden recipes: ${Object.values(S.recipes).filter(r=>r.hidden).length}${Object.values(S.recipes).some(r=>r.hidden)?' · <button class="btn sm ghost" data-action="unhide-all" style="padding:2px 6px">unhide all</button>':''}</p></div>
+    <div class="card pad"><h3 style="margin-bottom:12px">Data</h3>
+      <p class="small muted">${S.ui.storage==='cloud'?'Saved to your Claude account and synced between your phone and computer.':S.ui.storage==='device'?PRIVACY_TEXT:'This browser blocks local storage, so nothing is kept after you close the page. Export a backup before leaving.'}</p>
+      <div class="actions" style="margin-top:12px"><button class="btn" data-action="load-starter">Load starter data</button><button class="btn danger ghost" data-action="wipe-weeks">Delete all weekly plans</button></div></div>
+  </div>`}
