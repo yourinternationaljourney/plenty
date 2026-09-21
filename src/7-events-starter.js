@@ -69,9 +69,10 @@ function handleAction(b,e){const a=b.dataset.action,d=b.dataset;
     case 'url-import':closeModal();openUrlImport(d.day!=null?{day:+d.day,meal:d.meal}:null);break;
     case 'disc-slot':closeModal();S.ui.disc.slot={day:+d.day,meal:d.meal};S.ui.disc.filters={...EMPTY_FILTERS(),meal:d.meal};S.ui.disc.q='';S.ui.disc.shown=12;S.ui.tab='discover';renderNav();render();window.scrollTo(0,0);loadLive();break;
     case 'disc-clear-slot':S.ui.disc.slot=null;S.ui.disc.filters=EMPTY_FILTERS();render();break;
-    case 'disc-chip':{const f=S.ui.disc.filters;const k=d.k,v=d.v;if(k==='diet'){const set=new Set(f.diet||[]);set.has(v)?set.delete(v):set.add(v);f.diet=[...set]}else if(k==='meal'){f.meal=f.meal===v?'':v}else if(k==='oneServing'||k==='usesPantry'){f[k]=!f[k]}else{f[k]=f[k]===+v?0:+v}S.ui.disc.shown=12;render();loadLive();break}
+    case 'disc-chip':{S.ui.disc.atHomeMax=null;const f=S.ui.disc.filters;const k=d.k,v=d.v;if(k==='diet'){const set=new Set(f.diet||[]);set.has(v)?set.delete(v):set.add(v);f.diet=[...set]}else if(k==='meal'){f.meal=f.meal===v?'':v}else if(k==='oneServing'||k==='usesPantry'){f[k]=!f[k]}else{f[k]=f[k]===+v?0:+v}S.ui.disc.shown=12;render();loadLive();break}
     case 'disc-filters':openFilters();break;
-    case 'disc-reset':S.ui.disc.filters=EMPTY_FILTERS();S.ui.disc.q='';S.ui.disc.shown=12;render();loadLive();break;
+    case 'disc-reset':S.ui.disc.filters=EMPTY_FILTERS();S.ui.disc.q='';S.ui.disc.atHomeMax=null;S.ui.disc.shown=12;render();loadLive();break;
+    case 'at-home-recipes':S.ui.disc.atHomeMax=Math.max(0,+d.max||0);S.ui.disc.filters=EMPTY_FILTERS();S.ui.disc.q='';S.ui.disc.shown=48;S.ui.tab='discover';renderNav();render();window.scrollTo(0,0);break;
     case 'disc-more':S.ui.disc.shown+=12;render();break;
     case 'disc-retry':loadLive(true);break;
     case 'disc-collection':{const key=d.k;const map={featured:{},recommended:{},budget:{maxCost:Math.ceil(discoverContext().threshold)},quick:{maxMinutes:20},breakfast:{meal:'breakfast'},lunch:{meal:'lunch'},dinner:{meal:'dinner'},snacks:{meal:'snack'},one:{oneServing:true},pantry:{usesPantry:true},overlap:{overlap:true},favorites:{},viewed:{},cooked:{}};S.ui.disc.filters={...EMPTY_FILTERS(),...(map[key]||{})};S.ui.disc.shown=48;render();break}
@@ -304,4 +305,3 @@ inventory:[
 {id:'h_tea',name:'Tea bags',qty:40,unit:'pcs',location:'Pantry',note:'enough for the month'},
 {id:'h_water',name:'Sparkling water',qty:2,unit:'bottle',location:'Drinks',note:''}
 ]};
-

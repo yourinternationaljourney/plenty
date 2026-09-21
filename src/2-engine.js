@@ -163,7 +163,7 @@ function buildList(wk,wkKey){wk=wk||week();wkKey=wkKey||S.ui.weekKey;const lines
     else if(multi){L.needBase=L.qty;L.pack=''}
     else{let needAfter=need;if(untracked){L.atHome={all:true,label:'At home'};needAfter=0}else if(haveQ>=need-1e-9&&haveQ>0){L.atHome={all:true,label:'At home: '+fmtBase(haveQ,L.fam)};needAfter=0}else if(haveQ>0){needAfter=need-haveQ;L.atHome={all:false,label:'Have '+fmtBase(haveQ,L.fam)+' at home'}}
       L.needBase=needAfter;L.cost=need>0?L.fullCost*(needAfter/need):0;L.pack=needAfter>0?packHint(L.canon,L.fam.key,needAfter):''}
-    const pm=priceMemoryFor(L.canon,L.fam.key);if(pm&&L.needBase>0&&!(L.atHome&&L.atHome.all)){L.cost=L.needBase*pm.unitPrice;L.priced=pm.store||"receipt"}
+    const pm=priceMemoryFor(L.canon,L.fam.key);if(pm&&L.needBase>0&&!(L.atHome&&L.atHome.all)){L.cost=L.needBase*pm.unitPrice;L.priced=pm.store||"receipt";L.priceMemory=pm}
     L.checked=!!(wk.checked||{})[L.key];L.group=Object.entries(L.groups).sort((a,b)=>b[1]-a[1])[0][0];
     L.staple=L.items.length===0&&!L.extras&&(STAPLES.has(L.canon)||L.fam.key==='pinch'||(L.fam.key==='spoon'&&L.category==='Pantry'));
     L.recipes=[...L.recipes];out.push(L)}
@@ -194,7 +194,7 @@ function addEntry(day,meal,entry,replace,wk){const w=wk||week();w.slots=w.slots|
 
 /* ================= price memory (from confirmed receipts) ================= */
 function robustUnitPrice(samples){const vals=(samples||[]).map(s=>+s.unitPrice).filter(v=>v>0);if(!vals.length)return null;const sorted=[...vals].sort((a,b)=>a-b);const med=sorted[Math.floor(sorted.length/2)];const kept=vals.length>=3?vals.filter(v=>Math.abs(v-med)/med<=0.4):vals;if(!kept.length)return med;const s2=[...kept].sort((a,b)=>a-b);return s2[Math.floor(s2.length/2)]}
-function priceMemoryFor(cn,famKey){const p=S.prices&&S.prices[cn];if(!p||p.fam!==famKey)return null;const up=robustUnitPrice(p.samples);if(!up)return null;const last=(p.samples||[])[p.samples.length-1]||{};return {unitPrice:up,store:last.store||'',samples:(p.samples||[]).length}}
+function priceMemoryFor(cn,famKey){const p=S.prices&&S.prices[cn];if(!p||p.fam!==famKey)return null;const samples=(p.samples||[]).filter(s=>+s.unitPrice>0);const up=robustUnitPrice(samples);if(!up)return null;const last=samples[samples.length-1]||{},prev=samples[samples.length-2]||{};const changePct=prev.unitPrice?((+last.unitPrice-(+prev.unitPrice))/(+prev.unitPrice))*100:null;return {unitPrice:up,lastUnitPrice:+last.unitPrice||up,previousUnitPrice:+prev.unitPrice||null,changePct:Number.isFinite(changePct)?changePct:null,store:last.store||'',date:last.date||'',samples:samples.length,confidence:samples.length>=4?'high':samples.length>=2?'medium':'low'}}
 function recordPrice(cn,famKey,unitPrice,store,date){if(!(unitPrice>0))return null;const p=S.prices[cn]&&S.prices[cn].fam===famKey?clone(S.prices[cn]):{id:cn,fam:famKey,samples:[]};p.samples.push({unitPrice:Math.round(unitPrice*1e6)/1e6,store:store||'',date:date||iso(today())});if(p.samples.length>8)p.samples=p.samples.slice(-8);p.updatedAt=Date.now();S.prices[cn]=p;return p}
 
 /* ================= allergens & dietary ================= */

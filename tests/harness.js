@@ -20,7 +20,7 @@ function loadEngine(opts = {}) {
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  const parts = ['2-engine.js', '8-discover-engine.js', '10-health-engine.js', '12-storage.js', '13-onboarding.js', '14-backup.js', '18-compare-engine.js'];
+  const parts = ['2-engine.js', '8-discover-engine.js', '10-health-engine.js', '12-storage.js', '13-onboarding.js', '14-backup.js', '17-match-engine.js', '18-compare-engine.js'];
   const src = parts.map(f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n')
     // top-level const/let become context globals so tests can reach them (function declarations already are)
     .replace(/^(const|let) /gm, 'var ')

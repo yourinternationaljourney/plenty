@@ -97,6 +97,23 @@ test('pantry and At Home inventory are subtracted or excluded', () => {
   assert.ok(Math.abs(spinach.cost - 0.75 * 0.6) < 1e-9, 'cost follows the remaining quantity');
 });
 
+test('At Home recipe matching ranks meals by real inventory and missing items', () => {
+  const E = loadEngine();
+  E.S.recipes[breakfast.id] = breakfast;
+  E.S.recipes[dinner.id] = dinner;
+  E.S.recipes[curry.id] = curry;
+  E.S.inventory.h1 = { id: 'h1', name: 'Eggs', qty: 6, unit: 'pcs', location: 'Fridge' };
+  E.S.inventory.h2 = { id: 'h2', name: 'Wholegrain bread', qty: 1, unit: '', location: 'Pantry' };
+  E.S.inventory.h3 = { id: 'h3', name: 'Salt', qty: 0, unit: '', location: 'Pantry' };
+  const exact = E.atHomeRecipeMatches(Object.values(E.S.recipes), 0);
+  assert.equal(exact.length, 1);
+  assert.equal(exact[0].recipe.id, breakfast.id);
+  assert.equal(exact[0].missing.length, 0);
+  const oneMissing = E.atHomeRecipeMatches(Object.values(E.S.recipes), 1);
+  assert.deepEqual(Array.from(oneMissing, x => x.recipe.id), [breakfast.id, dinner.id]);
+  assert.equal(oneMissing[1].missing[0].canon, 'spinach');
+});
+
 test('budget totals recalculate when a recipe is added, and simulateAdd previews the impact', () => {
   const E = loadEngine();
   E.S.recipes[dinner.id] = dinner; E.S.recipes[curry.id] = curry;
