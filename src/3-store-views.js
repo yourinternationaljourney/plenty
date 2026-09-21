@@ -30,6 +30,8 @@ function setWeek(k){S.ui.weekKey=k;subscribeChat();render()}
 
 async function boot(){
   if(typeof applyTheme==='function')applyTheme(currentTheme());
+  try{const h=location.hash.replace('#','');if(ALL_TABS.includes(h))S.ui.tab=h}catch(e){}
+  window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(ALL_TABS.includes(h)&&h!==S.ui.tab&&S.ui.mode==='app'){S.ui.tab=h;renderNav();render()}});
   renderNav();render();
   const use=n=>(window.claude&&typeof window.claude.use==='function')?window.claude.use(n):Promise.resolve(null);
   use('sample').then(s=>{sampleFn=s;if(s){document.documentElement.classList.add('ai');render()}});
@@ -59,24 +61,30 @@ const hasContent=w=>Object.keys(w.slots||{}).length||(w.extras||[]).length||(w.t
 if(hot&&typeof hot.snapshot==='function')hot.snapshot(()=>({tab:S.ui.tab,weekKey:S.ui.weekKey}));
 
 /* ================= render shell ================= */
-const TABS=[['home','Home'],['plan','Plan'],['discover','Discover'],['recipes','Recipes'],['groceries','Groceries'],['items','Items'],['athome','At Home'],['coach','Coach'],['health','Health'],['settings','Settings']];
-const MOBILE_MAIN=['home','plan','groceries','coach'];
+const TABS=[['home','Home'],['plan','Plan'],['discover','Recipes'],['groceries','Groceries'],['athome','At Home']];           // primary navigation
+const SECONDARY=[['items','Regular items & pets'],['recipes','Recipe box list'],['health','Weekly Check-in'],['settings','Settings']]; // utility menu
+const MOBILE_MAIN=TABS.map(t=>t[0]);
+const ALL_TABS=['home','plan','discover','recipes','groceries','items','athome','health','coach','settings'];
+const navKeyFor=tab=>tab==='recipes'?'discover':tab;
 function renderNav(){const rail=document.getElementById('rail');const shell=document.querySelector('.shell');if(S.ui.mode!=='app'){rail.innerHTML='';rail.style.display='none';if(shell)shell.style.gridTemplateColumns='1fr';return}rail.style.display='';if(shell)shell.style.gridTemplateColumns='';
+  const ub=document.getElementById('utilbtn');if(ub){ub.hidden=false;ub.textContent=(S.settings.profileName||'P').trim()[0].toUpperCase()}const fab=document.getElementById('fab');if(fab){fab.hidden=false;fab.innerHTML=ICONS.coach+'<span>Ask Plenty</span>'}
   rail.innerHTML=`
     <div class="brand"><div class="mark">P</div><div class="name">Plenty</div></div>
-    ${TABS.map(([k,l])=>`<button class="tab ${S.ui.tab===k?'on':''} ${MOBILE_MAIN.includes(k)?'':'desk'}" data-tab="${k}">${ICONS[k==='athome'?'home2':k]}<span>${l}</span></button>`).join('')}
-    <button class="tab mob ${MOBILE_MAIN.includes(S.ui.tab)?'':'on'}" data-action="more">${ICONS.more}<span>More</span></button>
+    <div class="navgroup" role="navigation" aria-label="Main">${TABS.map(([k,l])=>`<button class="tab ${navKeyFor(S.ui.tab)===k?'on':''}" data-tab="${k}" aria-current="${navKeyFor(S.ui.tab)===k?'page':'false'}">${ICONS[k==='athome'?'home2':k]}<span>${l}</span></button>`).join('')}</div>
     <div class="spacer"></div>
+    <div class="navgroup util" role="navigation" aria-label="More">${SECONDARY.filter(([k])=>k!=='settings'&&k!=='recipes').map(([k,l])=>`<button class="tab sm ${S.ui.tab===k?'on':''}" data-tab="${k}">${ICONS[k==='health'?'health':k]}<span>${l}</span></button>`).join('')}<button class="tab ${S.ui.tab==='settings'?'on':''}" data-tab="settings" aria-current="${S.ui.tab==='settings'?'page':'false'}">${ICONS.settings}<span>Settings</span></button></div>
     <div class="storage ${S.ui.storage}"><span class="dot"></span>${S.ui.storage==='cloud'?'Saved to your Claude account':S.ui.storage==='device'?'Saved privately on this device':'Not saved: this browser blocks local storage'}</div>`}
 function render(){
   const m=document.getElementById('main');const scroll=window.scrollY;
   const active=document.activeElement,keepId=active&&active.id&&m.contains(active)?active.id:null;
   const sel=keepId&&active.selectionStart!=null?[active.selectionStart,active.selectionEnd]:null;
+  const ub=document.getElementById('utilbtn'),fb=document.getElementById('fab');if(ub)ub.hidden=S.ui.mode!=='app';if(fb)fb.hidden=S.ui.mode!=='app';
   if(S.ui.mode==='onboarding'){m.innerHTML=viewOnboarding();window.scrollTo(0,0);return}if(S.ui.mode==='pick'){m.innerHTML=viewProfilePick();return}
   const views={home:viewHome,plan:viewPlan,discover:viewDiscover,recipes:viewRecipes,groceries:viewGroceries,items:viewItems,athome:viewAtHome,coach:viewCoach,health:viewHealth,settings:viewSettings};
   m.innerHTML=(views[S.ui.tab]||viewHome)();if(typeof hydrateImages==='function')hydrateImages();
-  document.querySelectorAll('.tab[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===S.ui.tab));
-  const more=document.querySelector('.tab.mob');if(more)more.classList.toggle('on',!MOBILE_MAIN.includes(S.ui.tab));
+  document.querySelectorAll('.tab[data-tab]').forEach(t=>t.classList.toggle('on',t.dataset.tab===navKeyFor(S.ui.tab)||t.dataset.tab===S.ui.tab));
+  if(S.ui.mode==='app'){try{if(location.hash!=='#'+S.ui.tab)history.replaceState(null,'','#'+S.ui.tab)}catch(e){}}
+  if(S.ui.assistantOpen&&typeof renderAssistant==='function')renderAssistant();if(S.ui.checkinOpen&&typeof renderCheckinModal==='function')renderCheckinModal();
   if(keepId){const el=document.getElementById(keepId);if(el){el.focus({preventScroll:true});if(sel&&el.setSelectionRange)try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
   window.scrollTo(0,scroll)}
 function weekHead(eyebrow){const mon=parseISO(S.ui.weekKey);const isThis=iso(mondayOf(today()))===S.ui.weekKey;
@@ -100,7 +108,7 @@ function viewHome(){
   const hmax=Math.max(1,...hist.map(h=>Math.max(h.actual,h.est)),B.budget*1.1);
   return `${pwaBannerHtml()}
   <div class="head"><div>${weekHead('Overview')}<div class="sub">${entries.length?`${entries.length} planned eating moments · shopping ${fmtDate(shop)} · ${s.store?esc(s.store):'any store'}`:'Nothing planned yet this week.'}</div></div>
-    <div class="actions"><button class="btn" data-action="tab" data-tab="groceries">${ICONS.groceries} Grocery list</button><button class="btn primary ai-only" data-action="tab" data-tab="coach">${ICONS.spark} Ask the coach</button></div></div>
+    <div class="actions"><button class="btn" data-action="tab" data-tab="groceries">${ICONS.groceries} Grocery list</button><button class="btn primary ai-only" data-action="assistant">${ICONS.spark} Ask Plenty</button></div></div>
   ${isEmptyData()?starterEmpty()+'<div style="height:14px"></div>':''}
   <div class="tiles">
     <div class="tile hi"><div class="eyebrow">Weekly budget</div><div class="v num">${money(B.budget)}</div><div class="d">everything from the store</div></div>
@@ -130,8 +138,7 @@ function viewHome(){
       <div class="small muted" style="margin-top:10px">Actual this week ${money(B.groups.pet.actual)} · average ${money(B.groups.pet.normalized)} a week. Kept separate from your own nutrition.</div>`
       :`<div class="empty" style="margin-top:8px"><div>No pet supplies yet.</div><div class="actions"><button class="btn sm" data-action="new-item" data-kind="pet">Add ${esc(petName())}'s food</button></div></div>`}
     </div>
-    ${healthHomeCard()}
-    ${checkinCard()}
+    ${weeklyCheckinCardHtml()}
     <div class="card pad"><h3>Essentials due this week</h3>
       ${B.essentialsDue.length?`<div class="list" style="margin-top:8px">${B.essentialsDue.map(l=>`<div class="li" style="padding-left:0;padding-right:0"><span class="pri essential"></span><span class="grow">${esc(l.name)}<small>${esc(l.sources.join(', '))}</small></span><span class="amt num">${money(l.cost)}</span></div>`).join('')}</div>`:'<p class="small muted" style="margin-top:8px">No essential recurring items are due. Mark items essential on the Items tab.</p>'}
       ${B.postponed.length?`<div class="note" style="margin-top:10px">Postponed this week: ${B.postponed.map(i=>esc(i.name)).join(', ')}.</div>`:''}
@@ -159,7 +166,7 @@ function viewPlan(){
   const n=Object.keys(S.recipes).length;
   return `
   <div class="head"><div>${weekHead('Food plan')}<div class="sub">For <b>${S.settings.people}</b> · ${meals.map(m=>`${entries.filter(e=>e.meal===m).length}/${S.settings.targets[m]} ${plural(m,S.settings.targets[m])}`).join(' · ')}</div></div>
-    <div class="actions"><button class="btn ghost" data-action="clear-week" ${entries.length?'':'disabled'}>Clear week</button><button class="btn" data-action="shuffle-week" ${n?'':'disabled'}>Fill empty slots</button><button class="btn primary" data-action="tab" data-tab="discover">${ICONS.search} Find recipes</button><button class="btn ai-only" data-action="tab" data-tab="coach">${ICONS.spark} Plan with the coach</button></div></div>
+    <div class="actions"><button class="btn ghost" data-action="clear-week" ${entries.length?'':'disabled'}>Clear week</button><button class="btn" data-action="shuffle-week" ${n?'':'disabled'}>Fill empty slots</button><button class="btn primary" data-action="tab" data-tab="discover">${ICONS.search} Find recipes</button><button class="btn ai-only" data-action="assistant" data-draft="Plan my week within budget with breakfast, lunch, dinner and snacks.">${ICONS.spark} Ask Plenty</button></div></div>
   <div class="tiles">
     <div class="tile"><div class="eyebrow">Recipes in plan</div><div class="v num">${money(B.groups.meals.actual)}</div><div class="d">of ${money(B.availableForMeals)} available after essentials and buffer</div></div>
     <div class="tile ${B.overBy>0?'bad':''}"><div class="eyebrow">Whole week checkout</div><div class="v num">${money(B.actual)}</div><div class="d">budget ${money(B.budget)} · buffer ${money(B.buffer)}</div></div>

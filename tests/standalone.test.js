@@ -252,3 +252,17 @@ test('recipe photography: only approved providers are displayed, starter photos 
   assert.equal(E.recipeImage(blog), null, 'an imported recipe with a non-approved image falls back to the food tile');
   assert.ok(E.tileSvg(blog).startsWith('<svg'));
 });
+
+test('navigation: five primary tabs, no Coach or Health primary tab, assistant notices present in the bundle', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'dist', 'index.html'), 'utf8');
+  assert.match(html, /const TABS=\[\['home','Home'\],\['plan','Plan'\],\['discover','Recipes'\],\['groceries','Groceries'\],\['athome','At Home'\]\];/);
+  assert.match(html, /const SECONDARY=\[\['items','Regular items & pets'\],\['recipes','Recipe box list'\],\['health','Weekly Check-in'\],\['settings','Settings'\]\]/);
+  assert.ok(!/>Coach</.test(html) && !/Ask the coach/.test(html) && !/Plan with the coach/.test(html), 'no user-facing Coach label');
+  assert.ok(!/>s*(Coach|Nutritionist|Dietitian|Financial advisor)s*</.test(html), 'no professional title is used as a feature name or heading');
+  assert.match(html, /Plenty provides general planning and informational support, not medical, nutritional or financial advice\./);
+  assert.match(html, /Health insights are general guidance based on the information you enter\. Plenty does not diagnose conditions or replace advice from a qualified healthcare professional\./);
+  assert.match(html, /never diagnose a condition; never give medication advice/);
+  assert.match(html, /id="fab" class="fab ai-only" aria-label="Ask Plenty"/);
+  assert.match(html, /id="utilbtn" class="utilbtn" aria-label="Profile and settings"/);
+  assert.match(html, /function weeklyCheckinCardHtml\(\)/);
+});

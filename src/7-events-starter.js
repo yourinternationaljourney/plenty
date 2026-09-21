@@ -16,8 +16,11 @@ async function loadStarter(){let n=0;const put=(coll,arr,target)=>{for(const o o
 
 /* ================= events ================= */
 document.getElementById('rail').addEventListener('click',e=>{const m=e.target.closest('[data-action="more"]');if(m){openMore();return}const b=e.target.closest('[data-tab]');if(!b)return;S.ui.tab=b.dataset.tab;renderNav();render();window.scrollTo(0,0)});
-document.getElementById('modal').addEventListener('click',e=>{if(e.target.matches('.overlay')||e.target.closest('[data-close]')){closeModal();return}const b=e.target.closest('[data-action]');if(b)handleAction(b,e)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modalOpen())closeModal();if(e.key==='Enter'&&!e.shiftKey&&e.target.id==='chatIn'){e.preventDefault();sendChat(e.target.value)}});
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.matches('.overlay')||e.target.closest('[data-close]')){if(S.ui.assistantOpen)S.ui.assistantOpen=false;if(S.ui.checkinOpen)S.ui.checkinOpen=false;closeModal();return}const b=e.target.closest('[data-action]');if(b)handleAction(b,e)});
+document.getElementById('modal').addEventListener('input',e=>{if(e.target.dataset.input==='chat'){S.ui.chatDraft=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(160,e.target.scrollHeight)+'px'}});
+document.getElementById('fab').addEventListener('click',()=>openAssistant(''));
+document.getElementById('utilbtn').addEventListener('click',()=>openMore());
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modalOpen()){S.ui.assistantOpen=false;S.ui.checkinOpen=false;closeModal()}if(e.key==='Enter'&&!e.shiftKey&&e.target.id==='chatIn'){e.preventDefault();sendChat(e.target.value)}});
 const main=document.getElementById('main');
 main.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b||b.matches('input[type=checkbox]'))return;handleAction(b,e)});
 main.addEventListener('change',e=>{const t=e.target;
@@ -57,7 +60,7 @@ function handleAction(b,e){const a=b.dataset.action,d=b.dataset;
     case 'cooked':{const r=S.recipes[d.id];if(!r)return;closeModal();openModal(`${mhead('Cooked '+esc(r.name),'How was it? This tunes your recommendations.')}<div class="mb"><div class="actions"><button class="btn primary" data-liked="1">Liked it</button><button class="btn" data-liked="0">Not for me</button><button class="btn ghost" data-liked="">Just log it</button></div></div>`,'narrow');document.querySelectorAll('[data-liked]').forEach(b=>b.onclick=()=>{const v=b.dataset.liked;r.liked=v===''?r.liked:v==='1';r.cookedCount=(r.cookedCount||0)+1;r.lastCooked=iso(today());saveRecipe(r);noteCooked(r.id,v===''?null:v==='1');closeModal();toast('Logged')});break}
     case 'add-missing':addMissingToGroceries(d.id,+d.sv||0);break;
     case 'ai-similar':{const r=getRecipe(d.id);closeModal();openAiRecipe('generate');setTimeout(()=>{const ta=document.getElementById('aiIn');if(ta&&r)ta.value=`Something similar to "${r.name}" (${(r.ingredients||[]).slice(0,5).map(i=>i.name).join(', ')}) but with a twist, same meal type, similar cost.`},0);break}
-    case 'ask-coach':{const r=getRecipe(d.id);closeModal();S.ui.chatDraft=r?`About "${r.name}": does it fit this week's budget and plan? Where would you put it, and what should I swap out?`:'';S.ui.tab='coach';renderNav();render();break}
+    case 'ask-coach':{const r=getRecipe(d.id);closeModal();openAssistant(r?`About "${r.name}": does it fit this week's budget and plan? Where would you put it, and what should I swap out?`:'');break}
     case 'create-chooser':closeModal();openCreateChooser(d.day!=null?{day:+d.day,meal:d.meal}:null);break;
     case 'ai-create':closeModal();openAiCreate(d.day!=null?{day:+d.day,meal:d.meal}:null);break;
     case 'url-import':closeModal();openUrlImport(d.day!=null?{day:+d.day,meal:d.meal}:null);break;
@@ -71,9 +74,13 @@ function handleAction(b,e){const a=b.dataset.action,d=b.dataset;
     case 'disc-collection':{const key=d.k;const map={featured:{},recommended:{},budget:{maxCost:Math.ceil(discoverContext().threshold)},quick:{maxMinutes:20},breakfast:{meal:'breakfast'},lunch:{meal:'lunch'},dinner:{meal:'dinner'},snacks:{meal:'snack'},one:{oneServing:true},pantry:{usesPantry:true},overlap:{overlap:true},favorites:{},viewed:{},cooked:{}};S.ui.disc.filters={...EMPTY_FILTERS(),...(map[key]||{})};S.ui.disc.shown=48;render();break}
     case 'receipt-scan':closeModal();openReceiptScan();break;
     case 'health-profile':closeModal();openHealthProfile();break;
-    case 'health-ask':S.ui.chatDraft='Am I eating reasonably balanced this week? Give me at most three practical changes that fit my budget.';S.ui.tab='coach';renderNav();render();break;
-    case 'checkin':{const date=iso(today());const c=checkins();const a={...(c.days[date]||{})};a[d.k]=d.v==='1';saveCheckin(date,a);render();break}
-    case 'checkin-dismiss':dismissCheckin(d.date);render();toast('Skipped for today');break;
+    case 'health-ask':openAssistant('Am I eating reasonably balanced this week? Give me at most three practical changes that fit my budget.');break;
+    case 'assistant':closeModal();openAssistant(d.draft||'');break;
+    case 'assistant-close':closeAssistant();break;
+    case 'checkin-open':S.ui.checkinOpen=true;renderCheckinModal();break;
+    case 'checkin-close':S.ui.checkinOpen=false;closeModal();break;
+    case 'checkin':{const date=iso(today());const c=checkins();const a={...(c.days[date]||{})};a[d.k]=d.v==='1';saveCheckin(date,a);render();if(S.ui.checkinOpen)renderCheckinModal();break}
+    case 'checkin-dismiss':dismissCheckin(d.date);S.ui.checkinOpen=false;closeModal();render();toast('Skipped for today');break;
     case 'swap':{const sug=sweetSwapSuggestions();const s=sug[+d.i];if(!s)return;const res=applySweetSwap(s.line,d.c,s.alternatives[0]);if(res.changed.some(x=>x.startsWith('added')||x.startsWith('postponed')||x.startsWith('removed')))saveWeek();else render();toast(d.c==='keep'?'Kept as it is':d.c==='dismiss'?'Will not suggest this again':d.c==='both'?`${s.alternatives[0].name} added; ${s.line.name} kept`:`${s.line.name} postponed, ${s.alternatives[0].name} added`);break}
     case 'edit-recipe':closeModal();openEditor(S.recipes[d.id]);break;
     case 'fav':{const r=S.recipes[d.id];if(!r)return;r.favorite=!r.favorite;saveRecipe(r);openRecipe(d.id);break}
@@ -129,8 +136,8 @@ function handleAction(b,e){const a=b.dataset.action,d=b.dataset;
     case 'new-inv':openInvEditor(null);break;
     case 'edit-inv':openInvEditor(S.inventory[d.id]);break;
     case 'del-inv':deleteInv(d.id);toast('Used up');break;
-    case 'quick':S.ui.chatDraft=d.q;render();{const ta=document.getElementById('chatIn');if(ta){ta.focus();ta.style.height='auto';ta.style.height=Math.min(160,ta.scrollHeight)+'px'}}break;
-    case 'send':{const ta=document.getElementById('chatIn');if(ta)sendChat(ta.value);break}
+    case 'quick':S.ui.chatDraft=d.q;render();{const ta=document.querySelector('.modal #chatIn')||document.getElementById('chatIn');if(ta){ta.focus();ta.style.height='auto';ta.style.height=Math.min(160,ta.scrollHeight)+'px'}}break;
+    case 'send':{const ta=document.querySelector('.modal #chatIn')||document.getElementById('chatIn');if(ta)sendChat(ta.value);break}
     case 'apply-turn':{const c=chat();const t=c.turns[+d.turn];if(!t||t.applied)return;const picks=[...document.querySelectorAll(`input[data-turn="${d.turn}"]`)];const chosen=t.actions.filter((a,j)=>{const cb=picks.find(p=>+p.dataset.j===j);return cb&&cb.checked});const results=t.actions.map(()=>({ok:false,why:'Not selected'}));const applied=applyActions(chosen);let k=0;t.actions.forEach((a,j)=>{const cb=picks.find(p=>+p.dataset.j===j);if(cb&&cb.checked)results[j]=applied[k++]});t.results=results;t.applied=true;saveChat();const okN=results.filter(r=>r.ok).length;toast(`Applied ${okN} change${okN===1?'':'s'}. Totals recalculated.`);break}
     case 'dismiss-turn':{const c=chat();const t=c.turns[+d.turn];if(!t)return;t.applied=true;t.results=t.actions.map(()=>({ok:false,why:'Dismissed'}));saveChat();break}
     case 'clear-chat':confirmModal('Clear conversation?','The coach forgets this week\'s chat. Applied changes stay.','Clear',()=>{S.chats[S.ui.weekKey]={turns:[]};saveChat()},true);break;
