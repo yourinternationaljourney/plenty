@@ -22,7 +22,8 @@ jobs:
           set -e
           if git ls-files | grep -E '(^|/)\.env$'; then echo ".env must not be committed"; exit 1; fi
           if git ls-files | grep -Ei 'plenty-backup|receipt.*\.(jpe?g|png|heic)$'; then echo "backups or receipt images must not be committed"; exit 1; fi
-          if grep -rEn 'sk-ant-|SPOONACULAR_API_KEY=[A-Za-z0-9]' --include='*.js' --include='*.json' --include='*.html' --include='*.md' . --exclude-dir=node_modules --exclude-dir=dist | grep -v '.env.example'; then echo "possible secret in repository"; exit 1; fi
+          # real key shapes only; the guard patterns inside build.js and the tests are not secrets
+          if grep -rEn 'sk-ant-api[0-9]{2}-[A-Za-z0-9_-]{20,}|SPOONACULAR_API_KEY=[A-Za-z0-9]{8,}|ghp_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}' --include='*.js' --include='*.json' --include='*.html' --include='*.md' --include='*.yml' . --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git; then echo "possible secret in repository"; exit 1; fi
       - uses: actions/upload-artifact@v4
         with:
           name: plenty-dist
